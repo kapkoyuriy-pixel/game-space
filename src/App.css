@@ -1,4 +1,4 @@
-* {
+/* * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
@@ -16,4 +16,25 @@ html,
 
 canvas {
   display: block;
+} */
+
+/* App.css */
+body, html {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden; /* Забороняє прокрутку */
+}
+
+.game-container {
+  width: 100vw;
+  height: 100vh;
+  display: block;
+  margin: 0;
+  padding: 0;
+}
+
+canvas {
+  display: block; /* Прибирає нижній відступ для інлайнових елементів */
 }
