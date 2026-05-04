@@ -81,7 +81,6 @@ function App() {
       planetParallax.maxPlanetScale = 0.7;
       planetParallax.isWin = false;
 
-      // ЧАСТОЧКИ: Тонкі фіолетові крапки, які тепер краще видно
       dustParticles = this.add.group();
       for (let i = 0; i < 200; i++) {
         let dust = this.add.circle(
@@ -96,7 +95,6 @@ function App() {
         dustParticles.add(dust);
       }
 
-      // ЧАСТОЧКИ: Тонкі фіолетові лінії швидкості
       speedLines = this.add.group();
       for (let i = 0; i < 120; i++) {
         const line = this.add.rectangle(
@@ -169,6 +167,7 @@ function App() {
         .setOrigin(0, 0.5)
         .setDepth(20);
 
+      // Повернення фінального напису
       landingText = this.add
         .text(width / 2, height / 2, "Приземлення успішне!", {
           fontSize: "64px",
@@ -178,6 +177,8 @@ function App() {
         .setOrigin(0.5)
         .setDepth(100)
         .setAlpha(0);
+
+      // Повернення початкового зворотного відліку
       countdownText = this.add
         .text(width / 2, height / 2, "", {
           fontSize: "120px",
@@ -217,6 +218,14 @@ function App() {
           });
         }
       });
+
+      this.scale.on("resize", (gameSize) => {
+        const { width, height } = gameSize;
+        spaceBack.setPosition(width / 2, height / 2).setSize(width, height);
+        spaceBackSlow.setPosition(width / 2, height / 2).setSize(width, height);
+        ship.setX(width / 2);
+        landingText.setPosition(width / 2, height / 2);
+      });
     }
 
     function update() {
@@ -232,7 +241,6 @@ function App() {
         spaceBack.tilePositionY -= currentAcceleration * 65;
         spaceBackSlow.tilePositionY -= currentAcceleration * 10;
 
-        // Збільшена видимість для часточок
         const vis =
           currentAcceleration > 0.4
             ? Math.min(1, (currentAcceleration - 0.4) * 2)
@@ -267,8 +275,6 @@ function App() {
               (planetParallax.maxPlanetScale - 0.005) * Math.pow(adj, 1.2),
           );
           planetParallax.setAlpha(Math.min(1, 0.3 + adj * 2));
-          const c = Math.floor(0xaa + 0x55 * adj);
-          planetParallax.setTint(Phaser.Display.Color.GetColor(c, c, c));
         }
         planetParallax.y = height * 0.4 + height * 0.1 * progress;
 
@@ -277,16 +283,27 @@ function App() {
         progressText.setText(`${Math.round(progress * 100)}%`);
 
         const cursors = this.input.keyboard.createCursorKeys();
-        if (cursors.left.isDown) ship.setAccelerationX(-2200);
-        else if (cursors.right.isDown) ship.setAccelerationX(2200);
-        else ship.setAccelerationX(0);
+        const pointer = this.input.activePointer;
+
+        if (cursors.left.isDown || (pointer.isDown && pointer.x < width / 2)) {
+          ship.setAccelerationX(-2400);
+        } else if (
+          cursors.right.isDown ||
+          (pointer.isDown && pointer.x >= width / 2)
+        ) {
+          ship.setAccelerationX(2400);
+        } else {
+          ship.setAccelerationX(0);
+        }
+
         ship.angle = ship.body.velocity.x * 0.07;
 
-        if (this.time.now > lastAsteroidTime + 310) {
+        // СПАВН: Ще на 10% легше (збільшено інтервал до 340мс)
+        if (this.time.now > lastAsteroidTime + 340) {
           lastAsteroidTime = this.time.now;
           let spawnX = Phaser.Math.Between(50, width - 50);
           const shipX = ship.x;
-          const safeZone = 150;
+          const safeZone = 160;
 
           if (Math.abs(spawnX - shipX) < safeZone) {
             spawnX = spawnX < shipX ? spawnX - safeZone : spawnX + safeZone;
@@ -308,7 +325,6 @@ function App() {
         planetParallax.isWin = true;
         currentAcceleration = 0;
         ship.setAcceleration(0).setVelocity(0);
-        planetParallax.setTint(0xffffff).setAlpha(1);
         this.tweens.add({
           targets: ship,
           x: width / 2,
@@ -330,8 +346,13 @@ function App() {
     return () => game.destroy(true);
   }, []);
 
-  return <div className="game-container" ref={gameRef} />;
+  return (
+    <div
+      className="game-container"
+      ref={gameRef}
+      style={{ touchAction: "none" }}
+    />
+  );
 }
 
 export default App;
- .

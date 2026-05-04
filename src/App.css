@@ -1,41 +1,39 @@
-/* * {
+/* App.css */
+
+* {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  -webkit-touch-callout: none; /* Вимикає системне меню при довгому натисканні */
+  -webkit-user-select: none;    /* Вимикає виділення тексту */
+  user-select: none;
 }
 
-body,
-html,
-#root,
-.game-container {
-  width: 100vw;
-  height: 100vh;
-  overflow: hidden;
-  background-color: #000;
-}
-
-canvas {
-  display: block;
-} */
-
-/* App.css */
 body,
 html {
   margin: 0;
   padding: 0;
   width: 100%;
   height: 100%;
-  overflow: hidden; /* Забороняє прокрутку */
+  overflow: hidden;
+  position: fixed; /* Фіксує екран, щоб запобігти свайпам "назад" або "оновлення" */
+  background-color: #000;
 }
 
+#root,
 .game-container {
   width: 100vw;
   height: 100vh;
-  display: block;
-  margin: 0;
-  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  background-color: #000;
+  touch-action: none; /* Вимикає стандартні жести браузера (зум, панорама) */
 }
 
 canvas {
-  display: block; /* Прибирає нижній відступ для інлайнових елементів */
+  display: block;
+  touch-action: none; /* Гарантує, що Phaser отримає всі тач-події */
+  -webkit-tap-highlight-color: transparent; /* Прибирає синю рамку при натисканні на iOS/Android */
 }
