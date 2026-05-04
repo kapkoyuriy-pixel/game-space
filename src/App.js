@@ -38,6 +38,7 @@ function App() {
     let isGameStarted = false;
     let isGameOver = false;
     let currentAcceleration = 0;
+    let lastAsteroidTime = 0;
     const publicBase = (process.env.PUBLIC_URL || "").replace(/\/$/, "");
     const asset = (name) => `${publicBase}/${name}`;
 
@@ -51,9 +52,16 @@ function App() {
 
     function create() {
       const { width, height } = this.scale;
+
       isGameStarted = false;
       isGameOver = false;
       currentAcceleration = 0;
+      lastAsteroidTime = 0;
+
+      const dot = this.make.graphics({ x: 0, y: 0, add: false });
+      dot.fillStyle(0xffffff);
+      dot.fillCircle(4, 4, 4);
+      dot.generateTexture("fireDot", 8, 8);
 
       spaceBackSlow = this.add
         .tileSprite(width / 2, height / 2, width, height, "space")
@@ -68,44 +76,40 @@ function App() {
         .sprite(width / 2, height * 0.4, "planet")
         .setDepth(1)
         .setScale(0.005)
-        .setAlpha(0.1)
-        .setBlendMode(Phaser.BlendModes.NORMAL)
+        .setAlpha(0.3)
         .setTint(0xaaaaaa);
-
       planetParallax.maxPlanetScale = 0.7;
       planetParallax.isWin = false;
 
+      // ЧАСТОЧКИ: Тонкі фіолетові крапки, які тепер краще видно
       dustParticles = this.add.group();
-      const violetTint = 0xcc99ff;
-      for (let i = 0; i < 90; i++) {
-        const isLine = Math.random() > 0.5;
-        let dust = isLine
-          ? this.add.rectangle(
-              0,
-              0,
-              1,
-              Phaser.Math.Between(15, 30),
-              violetTint,
-              0.5,
-            )
-          : this.add.circle(0, 0, 1.2, violetTint, 0.6);
+      for (let i = 0; i < 200; i++) {
+        let dust = this.add.circle(
+          Phaser.Math.Between(0, width),
+          Phaser.Math.Between(0, height),
+          1.1,
+          0xbc88ff,
+          0.9,
+        );
         dust.setDepth(2).setAlpha(0);
-        dust.x = Phaser.Math.Between(0, width);
-        dust.y = Phaser.Math.Between(0, height);
+        dust.speedMult = Phaser.Math.FloatBetween(0.8, 2.5);
         dustParticles.add(dust);
       }
 
+      // ЧАСТОЧКИ: Тонкі фіолетові лінії швидкості
       speedLines = this.add.group();
-      for (let i = 0; i < 60; i++) {
+      for (let i = 0; i < 120; i++) {
         const line = this.add.rectangle(
           Phaser.Math.Between(0, width),
           Phaser.Math.Between(0, height),
           1.2,
-          Phaser.Math.Between(50, 100),
-          0xffffff,
-          0,
+          Phaser.Math.Between(120, 250),
+          0x9933ff,
+          0.6,
         );
         line.setDepth(2.1);
+        line.setAlpha(0);
+        line.speedMult = Phaser.Math.FloatBetween(2.5, 4.5);
         speedLines.add(line);
       }
 
@@ -113,24 +117,23 @@ function App() {
         .sprite(width / 2, height * 0.85, "ship")
         .setDepth(12)
         .setScale(0.2);
-      ship.setCollideWorldBounds(true);
-      ship.setDamping(true).setDrag(0.95).setMaxVelocity(700);
-
-      const fireCircle = this.make.graphics({ x: 0, y: 0, add: false });
-      fireCircle.fillStyle(0xffffff);
-      fireCircle.fillCircle(4, 4, 4);
-      fireCircle.generateTexture("fireParticle", 8, 8);
+      ship
+        .setCollideWorldBounds(true)
+        .setDamping(true)
+        .setDrag(0.95)
+        .setMaxVelocity(800);
 
       ship.fireEmitter = this.add
-        .particles(0, 0, "fireParticle", {
-          speed: { min: 300, max: 600 },
-          angle: 90,
-          scale: { start: 0.8, end: 0 },
+        .particles(0, 0, "fireDot", {
+          color: [0xffffff, 0x00ffff, 0x0000ff, 0x000000],
+          colorEase: "quad.out",
+          lifespan: 300,
+          angle: { min: 85, max: 95 },
+          speed: { min: 400, max: 800 },
+          scale: { start: 1.5, end: 0, ease: "sine.in" },
           blendMode: "ADD",
-          lifespan: 450,
           follow: ship,
-          followOffset: { x: 0, y: 45 },
-          color: [0xffff00, 0x00ffff],
+          followOffset: { x: 0, y: 40 },
           emitting: false,
         })
         .setDepth(11);
@@ -156,6 +159,7 @@ function App() {
         .image(barX + 310, barY + 5, "planet")
         .setScale(0.025)
         .setDepth(22);
+
       progressText = this.add
         .text(barX + 340, barY + 5, "0%", {
           fontSize: "22px",
@@ -205,15 +209,10 @@ function App() {
       this.physics.add.overlap(ship, asteroids, () => {
         if (!planetParallax.isWin && isGameStarted && !isGameOver) {
           isGameOver = true;
-          this.cameras.main.flash(500, 0, 255, 255);
-          this.time.delayedCall(50, () => {
-            this.physics.pause();
-            ship.fireEmitter.stop();
-          });
-          this.time.delayedCall(700, () => {
-            this.cameras.main.flash(500, 0, 255, 255);
-          });
-          this.time.delayedCall(2000, () => {
+          this.cameras.main.flash(400, 0, 255, 255);
+          this.physics.pause();
+          ship.fireEmitter.stop();
+          this.time.delayedCall(1000, () => {
             this.scene.restart();
           });
         }
@@ -229,53 +228,48 @@ function App() {
       );
 
       if (progress < 1) {
-        if (currentAcceleration < 1.6) currentAcceleration += 0.005;
+        if (currentAcceleration < 2.0) currentAcceleration += 0.006;
+        spaceBack.tilePositionY -= currentAcceleration * 65;
+        spaceBackSlow.tilePositionY -= currentAcceleration * 10;
 
-        spaceBack.tilePositionY -= currentAcceleration * 55;
-        spaceBackSlow.tilePositionY -= currentAcceleration * 8;
-
-        const particlesVisibility =
-          currentAcceleration > 0.7 ? currentAcceleration - 0.7 : 0;
+        // Збільшена видимість для часточок
+        const vis =
+          currentAcceleration > 0.4
+            ? Math.min(1, (currentAcceleration - 0.4) * 2)
+            : 0;
 
         dustParticles.getChildren().forEach((d) => {
-          d.setAlpha(particlesVisibility * 0.8);
-          d.y += currentAcceleration * 35;
+          d.setAlpha(vis * 0.9);
+          d.y += currentAcceleration * 55 * d.speedMult;
           if (d.y > height) {
-            d.y = -30;
+            d.y = -20;
             d.x = Phaser.Math.Between(0, width);
           }
         });
 
         speedLines.getChildren().forEach((line) => {
-          if (currentAcceleration > 0.5) {
-            line.setAlpha(particlesVisibility * 1.0);
-            line.y += currentAcceleration * 200;
-            line.displayHeight =
-              Phaser.Math.Between(50, 100) * (1 + currentAcceleration * 0.5);
+          if (currentAcceleration > 0.6) {
+            line.setAlpha(vis * 0.7);
+            line.y += currentAcceleration * 340 * line.speedMult;
             if (line.y > height) {
-              line.y = -150;
+              line.y = -250;
               line.x = Phaser.Math.Between(0, width);
             }
+          } else {
+            line.setAlpha(0);
           }
         });
 
-        this.cameras.main.setZoom(1 + currentAcceleration * 0.025);
-
-        let planetScaleEffect = 0.005;
         if (progress > 0.07) {
-          const adjProgress = (progress - 0.07) / 0.93;
-          planetScaleEffect =
+          const adj = (progress - 0.07) / 0.93;
+          planetParallax.setScale(
             0.005 +
-            (planetParallax.maxPlanetScale - 0.005) *
-              Math.pow(adjProgress, 1.2);
-          planetParallax.setAlpha(Math.min(1, 0.1 + adjProgress * 2));
-          const tintVal = Math.floor(0xaa + 0x55 * adjProgress);
-          planetParallax.setTint(
-            Phaser.Display.Color.GetColor(tintVal, tintVal, tintVal),
+              (planetParallax.maxPlanetScale - 0.005) * Math.pow(adj, 1.2),
           );
+          planetParallax.setAlpha(Math.min(1, 0.3 + adj * 2));
+          const c = Math.floor(0xaa + 0x55 * adj);
+          planetParallax.setTint(Phaser.Display.Color.GetColor(c, c, c));
         }
-
-        planetParallax.setScale(planetScaleEffect);
         planetParallax.y = height * 0.4 + height * 0.1 * progress;
 
         progressBar.width = 280 * progress;
@@ -283,59 +277,44 @@ function App() {
         progressText.setText(`${Math.round(progress * 100)}%`);
 
         const cursors = this.input.keyboard.createCursorKeys();
-        if (cursors.left.isDown) {
-          ship.setAccelerationX(-1800);
-          ship.setTint(0x00ffff);
-        } else if (cursors.right.isDown) {
-          ship.setAccelerationX(1800);
-          ship.setTint(0x00ffff);
-        } else {
-          ship.setAccelerationX(0);
-          ship.clearTint();
-        }
-        ship.angle = ship.body.velocity.x * 0.06;
+        if (cursors.left.isDown) ship.setAccelerationX(-2200);
+        else if (cursors.right.isDown) ship.setAccelerationX(2200);
+        else ship.setAccelerationX(0);
+        ship.angle = ship.body.velocity.x * 0.07;
 
-        // ВЕЛИКІ, АЛЕ РІДКІ МЕТЕОРИТИ
-        if (Phaser.Math.Between(0, 100) < 0.8) {
-          let spawnX =
-            Phaser.Math.Between(0, 10) < 6
-              ? ship.x + Phaser.Math.Between(-150, 150)
-              : Phaser.Math.Between(100, width - 100);
+        if (this.time.now > lastAsteroidTime + 310) {
+          lastAsteroidTime = this.time.now;
+          let spawnX = Phaser.Math.Between(50, width - 50);
+          const shipX = ship.x;
+          const safeZone = 150;
 
-          spawnX = Phaser.Math.Clamp(spawnX, 100, width - 100);
+          if (Math.abs(spawnX - shipX) < safeZone) {
+            spawnX = spawnX < shipX ? spawnX - safeZone : spawnX + safeZone;
+          }
 
           const ast = asteroids.create(
-            spawnX,
-            -200,
+            Phaser.Math.Clamp(spawnX, 50, width - 50),
+            -150,
             Phaser.Math.RND.pick(["asteroid", "asteroid2"]),
           );
-          const randomScale = Phaser.Math.FloatBetween(0.4, 0.8);
           ast
-            .setVelocityY(Phaser.Math.Between(200, 400))
-            .setScale(randomScale)
+            .setVelocityY(Phaser.Math.Between(300, 600))
+            .setScale(Phaser.Math.FloatBetween(0.4, 0.75))
             .setDepth(1.5);
-
-          // Круглий хітбокс для великого астероїда
           ast.body.setCircle(ast.width * 0.4);
-          ast.setAngularVelocity(Phaser.Math.Between(-50, 50));
+          ast.setAngularVelocity(Phaser.Math.Between(-60, 60));
         }
       } else if (!planetParallax.isWin) {
         planetParallax.isWin = true;
         currentAcceleration = 0;
         ship.setAcceleration(0).setVelocity(0);
-        ship.clearTint();
-        speedLines.getChildren().forEach((l) => l.setVisible(false));
-        dustParticles.getChildren().forEach((d) => d.setVisible(false));
-        this.cameras.main.setZoom(1);
         planetParallax.setTint(0xffffff).setAlpha(1);
-
         this.tweens.add({
           targets: ship,
           x: width / 2,
           y: height / 2,
           scale: 0,
           duration: 2000,
-          ease: "Power2",
           onStart: () => ship.fireEmitter.stop(),
           onComplete: () => {
             landingText.setAlpha(1);
@@ -343,7 +322,7 @@ function App() {
         });
       }
       asteroids.getChildren().forEach((a) => {
-        if (a.y > height + 200) a.destroy();
+        if (a.y > height + 250) a.destroy();
       });
     }
 
@@ -355,3 +334,4 @@ function App() {
 }
 
 export default App;
+ .
