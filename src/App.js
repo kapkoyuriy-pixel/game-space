@@ -7,13 +7,18 @@ function App() {
   const gameRef = useRef(null);
 
   useEffect(() => {
+    const dpr = window.devicePixelRatio || 1;
+
     const config = {
       type: Phaser.AUTO,
-      width: window.innerWidth,
-      height: window.innerHeight,
+      width: window.innerWidth * dpr,
+      height: window.innerHeight * dpr,
       parent: gameRef.current,
+      canvasStyle: `width: 100%; height: 100%;`,
+      pixelArt: false,
+      antialias: true,
       scale: {
-        mode: Phaser.Scale.RESIZE,
+        mode: Phaser.Scale.NONE,
         autoCenter: Phaser.Scale.CENTER_BOTH,
       },
       physics: {
@@ -30,6 +35,7 @@ function App() {
       planetParallax,
       speedLines,
       dustParticles,
+      starParticles,
       progressBar,
       uiShip,
       progressText,
@@ -51,7 +57,12 @@ function App() {
     }
 
     function create() {
-      const { width, height } = this.scale;
+      const width = this.cameras.main.width;
+      const height = this.cameras.main.height;
+      const isMobile = window.innerWidth < 768;
+
+      const baseScale = isMobile ? Math.min(window.innerWidth / 400, 0.6) : 1.0;
+      const uiScale = baseScale * dpr;
 
       isGameStarted = false;
       isGameOver = false;
@@ -78,99 +89,123 @@ function App() {
         .setScale(0.005)
         .setAlpha(0.3)
         .setTint(0xaaaaaa);
-      planetParallax.maxPlanetScale = 0.7;
+      planetParallax.maxPlanetScale = (isMobile ? 0.5 : 0.7) * dpr;
       planetParallax.isWin = false;
 
       dustParticles = this.add.group();
-      for (let i = 0; i < 200; i++) {
+      for (let i = 0; i < (isMobile ? 80 : 120); i++) {
         let dust = this.add.circle(
           Phaser.Math.Between(0, width),
           Phaser.Math.Between(0, height),
-          1.1,
+          0.8 * dpr,
           0xbc88ff,
-          0.9,
+          0.7,
         );
         dust.setDepth(2).setAlpha(0);
-        dust.speedMult = Phaser.Math.FloatBetween(0.8, 2.5);
+        dust.speedMult = Phaser.Math.FloatBetween(1.5, 4.0);
         dustParticles.add(dust);
       }
 
+      starParticles = this.add.group();
+      for (let i = 0; i < (isMobile ? 50 : 80); i++) {
+        let star = this.add.circle(
+          Phaser.Math.Between(0, width),
+          Phaser.Math.Between(0, height),
+          0.6 * dpr,
+          0xffffff,
+          0.8,
+        );
+        star.setDepth(1.9).setAlpha(0);
+        star.speedMult = Phaser.Math.FloatBetween(0.8, 2.0);
+        starParticles.add(star);
+      }
+
       speedLines = this.add.group();
-      for (let i = 0; i < 120; i++) {
+      for (let i = 0; i < 150; i++) {
+        // ПОДОВЖЕНО ПОЧАТКОВІ ЛІНІЇ: діапазон довжини збільшено (350-700 замість 200-500)
         const line = this.add.rectangle(
           Phaser.Math.Between(0, width),
           Phaser.Math.Between(0, height),
-          1.2,
-          Phaser.Math.Between(120, 250),
-          0x9933ff,
-          0.6,
+          1.5 * dpr,
+          Phaser.Math.Between(350, 700) * dpr,
+          0xaa55ff,
+          0.8,
         );
-        line.setDepth(2.1);
-        line.setAlpha(0);
-        line.speedMult = Phaser.Math.FloatBetween(2.5, 4.5);
+        line.setDepth(2.1).setAlpha(0);
+        line.speedMult = Phaser.Math.FloatBetween(5.0, 9.0);
         speedLines.add(line);
       }
 
       ship = this.physics.add
         .sprite(width / 2, height * 0.85, "ship")
         .setDepth(12)
-        .setScale(0.2);
+        .setScale(0.15 * uiScale);
       ship
         .setCollideWorldBounds(true)
         .setDamping(true)
         .setDrag(0.95)
-        .setMaxVelocity(800);
+        .setMaxVelocity(800 * dpr);
 
       ship.fireEmitter = this.add
         .particles(0, 0, "fireDot", {
           color: [0xffffff, 0x00ffff, 0x0000ff, 0x000000],
           colorEase: "quad.out",
-          lifespan: 300,
+          lifespan: 250,
           angle: { min: 85, max: 95 },
-          speed: { min: 400, max: 800 },
-          scale: { start: 1.5, end: 0, ease: "sine.in" },
+          speed: { min: 300 * dpr, max: 600 * dpr },
+          scale: { start: 1.2 * uiScale, end: 0, ease: "sine.in" },
           blendMode: "ADD",
           follow: ship,
-          followOffset: { x: 0, y: 40 },
+          followOffset: { x: 0, y: 30 * uiScale },
           emitting: false,
         })
         .setDepth(11);
 
       asteroids = this.physics.add.group();
 
-      const barX = 80;
-      const barY = 30;
+      const barWidth = (isMobile ? window.innerWidth * 0.5 : 280) * dpr;
+      const barX = (isMobile ? 20 : 80) * dpr;
+      const barY = 30 * dpr;
+
       this.add
-        .rectangle(barX + 140, barY + 5, 280, 10, 0x000000, 0.5)
-        .setStrokeStyle(2, 0x00ffff)
+        .rectangle(
+          barX + barWidth / 2,
+          barY + 5,
+          barWidth,
+          8 * dpr,
+          0x000000,
+          0.5,
+        )
+        .setStrokeStyle(1 * dpr, 0x00ffff)
         .setDepth(20);
       progressBar = this.add
-        .rectangle(barX, barY + 5, 0, 10, 0x00ffff)
+        .rectangle(barX, barY + 5, 0, 8 * dpr, 0x00ffff)
         .setOrigin(0, 0.5)
         .setDepth(21);
+
+      // ЗБІЛЬШЕНО КОРАБЕЛЬ НА ПРОГРЕС-БАРІ (0.05 замість 0.03)
       uiShip = this.add
         .image(barX, barY + 5, "ship")
-        .setScale(0.05)
+        .setScale(0.05 * uiScale)
         .setAngle(90)
         .setDepth(22);
       this.add
-        .image(barX + 310, barY + 5, "planet")
-        .setScale(0.025)
+        .image(barX + barWidth + 25 * dpr, barY + 5, "planet")
+        .setScale(0.015 * uiScale)
         .setDepth(22);
 
       progressText = this.add
-        .text(barX + 340, barY + 5, "0%", {
-          fontSize: "22px",
+        .text(barX + barWidth + 40 * dpr, barY + 5, "0%", {
+          fontSize: `${16 * uiScale}px`,
           fill: "#00ffff",
           fontFamily: "Arial Black",
         })
         .setOrigin(0, 0.5)
         .setDepth(20);
 
-      // Повернення фінального напису
       landingText = this.add
         .text(width / 2, height / 2, "Приземлення успішне!", {
-          fontSize: "64px",
+          fontSize: `${(isMobile ? 32 : 64) * dpr}px`,
           fill: "#00ffff",
           fontFamily: "Arial Black",
         })
@@ -178,10 +213,11 @@ function App() {
         .setDepth(100)
         .setAlpha(0);
 
-      // Повернення початкового зворотного відліку
+      // АДАПТОВАНО РОЗМІР "ПОЛЕТІЛИ!" ДЛЯ МОБІЛЬНИХ (зменшено коефіцієнт для mobile)
+      const countdownSize = isMobile ? 55 * dpr : 120 * dpr;
       countdownText = this.add
         .text(width / 2, height / 2, "", {
-          fontSize: "120px",
+          fontSize: `${countdownSize}px`,
           fill: "#00ffff",
           fontFamily: "Arial Black",
         })
@@ -210,57 +246,66 @@ function App() {
       this.physics.add.overlap(ship, asteroids, () => {
         if (!planetParallax.isWin && isGameStarted && !isGameOver) {
           isGameOver = true;
-          this.cameras.main.flash(400, 0, 255, 255);
+          this.cameras.main.flash(500, 0, 255, 255);
+          this.time.delayedCall(700, () => {
+            this.cameras.main.flash(800, 0, 255, 255);
+          });
           this.physics.pause();
           ship.fireEmitter.stop();
-          this.time.delayedCall(1000, () => {
+          this.time.delayedCall(1600, () => {
             this.scene.restart();
           });
         }
-      });
-
-      this.scale.on("resize", (gameSize) => {
-        const { width, height } = gameSize;
-        spaceBack.setPosition(width / 2, height / 2).setSize(width, height);
-        spaceBackSlow.setPosition(width / 2, height / 2).setSize(width, height);
-        ship.setX(width / 2);
-        landingText.setPosition(width / 2, height / 2);
       });
     }
 
     function update() {
       if (!isGameStarted || isGameOver) return;
-      const { width, height } = this.scale;
+      const width = this.cameras.main.width;
+      const height = this.cameras.main.height;
+      const isMobile = window.innerWidth < 768;
+      const barWidth = (isMobile ? window.innerWidth * 0.5 : 280) * dpr;
+      const barX = (isMobile ? 20 : 80) * dpr;
+
       const progress = Math.min(
         1,
         (this.time.now / 1000 - planetParallax.spawnTime) / 90,
       );
 
       if (progress < 1) {
-        if (currentAcceleration < 2.0) currentAcceleration += 0.006;
-        spaceBack.tilePositionY -= currentAcceleration * 65;
-        spaceBackSlow.tilePositionY -= currentAcceleration * 10;
+        if (currentAcceleration < 2.0) currentAcceleration += 0.008;
+        spaceBack.tilePositionY -= currentAcceleration * 65 * dpr;
+        spaceBackSlow.tilePositionY -= currentAcceleration * 10 * dpr;
 
         const vis =
-          currentAcceleration > 0.4
-            ? Math.min(1, (currentAcceleration - 0.4) * 2)
+          currentAcceleration > 0.2
+            ? Math.min(1, (currentAcceleration - 0.2) * 2.5)
             : 0;
 
         dustParticles.getChildren().forEach((d) => {
           d.setAlpha(vis * 0.9);
-          d.y += currentAcceleration * 55 * d.speedMult;
+          d.y += currentAcceleration * 60 * d.speedMult * dpr;
           if (d.y > height) {
             d.y = -20;
             d.x = Phaser.Math.Between(0, width);
           }
         });
 
+        starParticles.getChildren().forEach((s) => {
+          s.setAlpha(vis * 0.7);
+          s.y += currentAcceleration * 40 * s.speedMult * dpr;
+          if (s.y > height) {
+            s.y = -20;
+            s.x = Phaser.Math.Between(0, width);
+          }
+        });
+
         speedLines.getChildren().forEach((line) => {
-          if (currentAcceleration > 0.6) {
-            line.setAlpha(vis * 0.7);
-            line.y += currentAcceleration * 340 * line.speedMult;
+          if (currentAcceleration > 0.3) {
+            line.setAlpha(vis * 0.8);
+            line.y += currentAcceleration * 450 * line.speedMult * dpr;
             if (line.y > height) {
-              line.y = -250;
+              line.y = -700 * dpr;
               line.x = Phaser.Math.Between(0, width);
             }
           } else {
@@ -271,55 +316,53 @@ function App() {
         if (progress > 0.07) {
           const adj = (progress - 0.07) / 0.93;
           planetParallax.setScale(
-            0.005 +
-              (planetParallax.maxPlanetScale - 0.005) * Math.pow(adj, 1.2),
+            0.005 * dpr +
+              (planetParallax.maxPlanetScale - 0.005 * dpr) *
+                Math.pow(adj, 1.2),
           );
           planetParallax.setAlpha(Math.min(1, 0.3 + adj * 2));
         }
         planetParallax.y = height * 0.4 + height * 0.1 * progress;
 
-        progressBar.width = 280 * progress;
-        uiShip.x = 80 + 280 * progress;
+        progressBar.width = barWidth * progress;
+        uiShip.x = barX + barWidth * progress;
         progressText.setText(`${Math.round(progress * 100)}%`);
 
-        const cursors = this.input.keyboard.createCursorKeys();
         const pointer = this.input.activePointer;
+        const cursors = this.input.keyboard.createCursorKeys();
 
         if (cursors.left.isDown || (pointer.isDown && pointer.x < width / 2)) {
-          ship.setAccelerationX(-2400);
+          ship.setAccelerationX(-2400 * dpr);
         } else if (
           cursors.right.isDown ||
           (pointer.isDown && pointer.x >= width / 2)
         ) {
-          ship.setAccelerationX(2400);
+          ship.setAccelerationX(2400 * dpr);
         } else {
           ship.setAccelerationX(0);
         }
 
-        ship.angle = ship.body.velocity.x * 0.07;
+        ship.angle = (ship.body.velocity.x * 0.07) / dpr;
 
-        // СПАВН: Ще на 10% легше (збільшено інтервал до 340мс)
-        if (this.time.now > lastAsteroidTime + 340) {
+        const spawnInterval = isMobile ? 650 : 350;
+        if (this.time.now > lastAsteroidTime + spawnInterval) {
           lastAsteroidTime = this.time.now;
-          let spawnX = Phaser.Math.Between(50, width - 50);
-          const shipX = ship.x;
-          const safeZone = 160;
-
-          if (Math.abs(spawnX - shipX) < safeZone) {
-            spawnX = spawnX < shipX ? spawnX - safeZone : spawnX + safeZone;
-          }
-
+          let spawnX = Phaser.Math.Between(30 * dpr, width - 30 * dpr);
           const ast = asteroids.create(
-            Phaser.Math.Clamp(spawnX, 50, width - 50),
-            -150,
+            spawnX,
+            -100 * dpr,
             Phaser.Math.RND.pick(["asteroid", "asteroid2"]),
           );
+          const astScale =
+            (isMobile
+              ? Phaser.Math.FloatBetween(0.15, 0.25)
+              : Phaser.Math.FloatBetween(0.4, 0.7)) * dpr;
           ast
-            .setVelocityY(Phaser.Math.Between(300, 600))
-            .setScale(Phaser.Math.FloatBetween(0.4, 0.75))
+            .setVelocityY(Phaser.Math.Between(250, 500) * dpr)
+            .setScale(astScale)
             .setDepth(1.5);
-          ast.body.setCircle(ast.width * 0.4);
-          ast.setAngularVelocity(Phaser.Math.Between(-60, 60));
+          ast.body.setCircle(ast.width * 0.35);
+          ast.setAngularVelocity(Phaser.Math.Between(-50, 50));
         }
       } else if (!planetParallax.isWin) {
         planetParallax.isWin = true;
@@ -338,7 +381,7 @@ function App() {
         });
       }
       asteroids.getChildren().forEach((a) => {
-        if (a.y > height + 250) a.destroy();
+        if (a.y > height + 200 * dpr) a.destroy();
       });
     }
 
@@ -346,13 +389,7 @@ function App() {
     return () => game.destroy(true);
   }, []);
 
-  return (
-    <div
-      className="game-container"
-      ref={gameRef}
-      style={{ touchAction: "none" }}
-    />
-  );
+  return <div className="game-container" ref={gameRef} />;
 }
 
 export default App;

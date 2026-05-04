@@ -5,7 +5,7 @@
   padding: 0;
   box-sizing: border-box;
   -webkit-touch-callout: none; /* Вимикає системне меню при довгому натисканні */
-  -webkit-user-select: none;    /* Вимикає виділення тексту */
+  -webkit-user-select: none; /* Вимикає виділення тексту */
   user-select: none;
 }
 
