@@ -122,12 +122,13 @@ function App() {
 
       speedLines = this.add.group();
       for (let i = 0; i < 150; i++) {
-        // ПОДОВЖЕНО ПОЧАТКОВІ ЛІНІЇ: діапазон довжини збільшено (350-700 замість 200-500)
+        // ДОВЖИНА СКОРОЧЕНА: тепер максимум 1/3 екрана
+        const lineLen = Phaser.Math.Between(height * 0.1, height * 0.33);
         const line = this.add.rectangle(
           Phaser.Math.Between(0, width),
           Phaser.Math.Between(0, height),
           1.5 * dpr,
-          Phaser.Math.Between(350, 700) * dpr,
+          lineLen,
           0xaa55ff,
           0.8,
         );
@@ -183,7 +184,6 @@ function App() {
         .setOrigin(0, 0.5)
         .setDepth(21);
 
-      // ЗБІЛЬШЕНО КОРАБЕЛЬ НА ПРОГРЕС-БАРІ (0.05 замість 0.03)
       uiShip = this.add
         .image(barX, barY + 5, "ship")
         .setScale(0.05 * uiScale)
@@ -213,7 +213,6 @@ function App() {
         .setDepth(100)
         .setAlpha(0);
 
-      // АДАПТОВАНО РОЗМІР "ПОЛЕТІЛИ!" ДЛЯ МОБІЛЬНИХ (зменшено коефіцієнт для mobile)
       const countdownSize = isMobile ? 55 * dpr : 120 * dpr;
       countdownText = this.add
         .text(width / 2, height / 2, "", {
@@ -273,13 +272,14 @@ function App() {
       );
 
       if (progress < 1) {
-        if (currentAcceleration < 2.0) currentAcceleration += 0.008;
+        // ЧАС ПОЯВИ: прискорення тепер зростає повільніше (0.005), щоб смуги були в кадрі довше
+        if (currentAcceleration < 2.0) currentAcceleration += 0.005;
         spaceBack.tilePositionY -= currentAcceleration * 65 * dpr;
         spaceBackSlow.tilePositionY -= currentAcceleration * 10 * dpr;
 
         const vis =
-          currentAcceleration > 0.2
-            ? Math.min(1, (currentAcceleration - 0.2) * 2.5)
+          currentAcceleration > 0.15
+            ? Math.min(1, (currentAcceleration - 0.15) * 2.0)
             : 0;
 
         dustParticles.getChildren().forEach((d) => {
@@ -301,11 +301,12 @@ function App() {
         });
 
         speedLines.getChildren().forEach((line) => {
-          if (currentAcceleration > 0.3) {
+          // СМУГИ З'ЯВЛЯЮТЬСЯ РАНІШЕ І ТРИВАЮТЬ ДОВШЕ
+          if (currentAcceleration > 0.2) {
             line.setAlpha(vis * 0.8);
             line.y += currentAcceleration * 450 * line.speedMult * dpr;
             if (line.y > height) {
-              line.y = -700 * dpr;
+              line.y = -height * 0.4;
               line.x = Phaser.Math.Between(0, width);
             }
           } else {
