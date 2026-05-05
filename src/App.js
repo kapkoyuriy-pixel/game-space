@@ -13,8 +13,10 @@ function App() {
       type: Phaser.AUTO,
       parent: gameRef.current,
       canvasStyle: "width: 100%; height: 100%;",
-      pixelArt: false,
+      pixelArt: false, // Для плавної графіки
       antialias: true,
+      antialiasGL: true, // Покращує чіткість на нових мобілках
+      roundPixels: true, // Змушує об'єкти чітко ставати в сітку пікселів (як у ГД)
       scale: {
         mode: Phaser.Scale.RESIZE,
         autoCenter: Phaser.Scale.CENTER_BOTH,
@@ -107,20 +109,6 @@ function App() {
         dustParticles.add(dust);
       }
 
-      starParticles = this.add.group();
-      for (let i = 0; i < (isMobile ? 8 : 80); i++) {
-        let star = this.add.circle(
-          Phaser.Math.Between(0, width),
-          Phaser.Math.Between(0, height),
-          0.6 * dpr,
-          0xbc88ff,
-          0.8,
-        );
-        star.setDepth(1.9).setAlpha(0);
-        star.speedMult = Phaser.Math.FloatBetween(0.8, 2.0);
-        starParticles.add(star);
-      }
-
       speedLines = this.add.group();
       const lineCount = isMobile ? 40 : 150;
       for (let i = 0; i < lineCount; i++) {
@@ -144,26 +132,48 @@ function App() {
         .sprite(width / 2, isMobile ? height * 0.8 : height * 0.85, "ship")
         .setDepth(12)
         .setScale((isMobile ? 0.12 : 0.15) * uiScale);
+
+      // Фізика з інерцією
       ship
         .setCollideWorldBounds(true)
         .setDamping(true)
-        .setDrag(0.95)
-        .setMaxVelocity(isMobile ? 800 : 800);
+        .setDrag(isMobile ? 0.92 : 0.95)
+        .setMaxVelocity((isMobile ? 350 : 800) * dpr);
 
+      // Яскравий вогонь
       ship.fireEmitter = this.add
         .particles(0, 0, "fireDot", {
           color: [0xffffff, 0x00ffff, 0x0000ff, 0x000000],
           colorEase: "quad.out",
           lifespan: 250,
           angle: { min: 85, max: 95 },
-          speed: { min: 300, max: 600 },
+          speed: { min: 300 * dpr, max: 600 * dpr },
           scale: { start: 1.2 * uiScale, end: 0, ease: "sine.in" },
           blendMode: "ADD",
+          frequency: 20,
           follow: ship,
           followOffset: { x: 0, y: 30 * uiScale },
           emitting: false,
         })
         .setDepth(11);
+
+      // Маска кольору морської хвилі при дотику
+      this.input.on("pointerdown", () => {
+        if (isGameStarted && !isGameOver) {
+          ship.setTint(0x00ffff);
+          this.tweens.add({
+            targets: ship,
+            scaleX: ship.scaleX * 1.05,
+            scaleY: ship.scaleY * 1.05,
+            duration: 100,
+            yoyo: true,
+            ease: "Quad.easeOut",
+            onComplete: () => {
+              ship.clearTint();
+            },
+          });
+        }
+      });
 
       asteroids = this.physics.add.group();
 
@@ -196,7 +206,6 @@ function App() {
         .image(barX + barWidth + 25 * dpr, barY + 5, "planet")
         .setScale(0.015 * uiScale)
         .setDepth(22);
-
       progressText = this.add
         .text(barX + barWidth + 40 * dpr, barY + 5, "0%", {
           fontSize: `${16 * uiScale}px`,
@@ -205,7 +214,6 @@ function App() {
         })
         .setOrigin(0, 0.5)
         .setDepth(20);
-
       landingText = this.add
         .text(width / 2, height / 2, "Приземлення успішне!", {
           fontSize: `${(isMobile ? 22 : 64) * dpr}px`,
@@ -270,7 +278,6 @@ function App() {
       );
 
       if (progress < 1) {
-        // --- ЛОГІКА ВІД КЛОДА ---
         const maxAccel = isMobile ? 1.5 : 2.0;
         const accelSpeed = isMobile ? 0.003 : 0.005;
         if (currentAcceleration < maxAccel)
@@ -295,18 +302,13 @@ function App() {
           }
         });
 
-        // Управління кораблем з інтерполяцією[cite: 4]
+        // Плавне керування з інтерполяцією (як у ГД)
         let targetAccelX = 0;
         const pointer = this.input.activePointer;
-        const cursorsInput = this.input.keyboard.createCursorKeys();
-
-        if (
-          cursorsInput.left.isDown ||
-          (pointer.isDown && pointer.x < width / 2)
-        ) {
+        if (cursors.left.isDown || (pointer.isDown && pointer.x < width / 2)) {
           targetAccelX = (isMobile ? -1200 : -2400) * dpr;
         } else if (
-          cursorsInput.right.isDown ||
+          cursors.right.isDown ||
           (pointer.isDown && pointer.x >= width / 2)
         ) {
           targetAccelX = (isMobile ? 1200 : 2400) * dpr;
@@ -320,7 +322,7 @@ function App() {
         );
         ship.setAccelerationX(smoothAccelX);
 
-        // Плавний поворот[cite: 4]
+        // Поворот залежно від швидкості
         const targetAngle = (ship.body.velocity.x * 0.05) / dpr;
         ship.angle = Phaser.Math.Linear(ship.angle, targetAngle, 0.2);
 
@@ -341,7 +343,6 @@ function App() {
             line.setAlpha(0);
           }
         });
-        // --- КІНЕЦЬ ЛОГІКИ КЛОДА ---
 
         if (progress > 0.07) {
           const adj = (progress - 0.07) / 0.93;
