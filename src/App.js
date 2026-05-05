@@ -28,6 +28,11 @@ function App() {
         arcade: { gravity: { y: 0 }, debug: false },
       },
       scene: { preload, create, update },
+      render: {
+        pixelArt: false,
+        antialias: true,
+        roundPixels: true,
+},
     };
 
     let ship,
@@ -131,7 +136,7 @@ function App() {
       ship = this.physics.add
         .sprite(width / 2, isMobile ? height * 0.8 : height * 0.85, "ship")
         .setDepth(12)
-        .setScale((isMobile ? 0.12 : 0.15) * uiScale);
+        .setScale(isMobile ? 0.12 : 0.15);
 
       // Фізика з інерцією
       ship
@@ -208,30 +213,34 @@ function App() {
         .setDepth(22);
       progressText = this.add
         .text(barX + barWidth + 40 * dpr, barY + 5, "0%", {
-          fontSize: `${16 * uiScale}px`,
+          fontSize: `${isMobile ? 14 : 16}px`,
           fill: "#00ffff",
           fontFamily: "Arial Black",
         })
         .setOrigin(0, 0.5)
-        .setDepth(20);
+        .setDepth(20)
+        .setResolution(dpr);
+        
       landingText = this.add
         .text(width / 2, height / 2, "Приземлення успішне!", {
-          fontSize: `${(isMobile ? 22 : 64) * dpr}px`,
+          fontSize: `${isMobile ? 22 : 64}px`,
           fill: "#00ffff",
           fontFamily: "Arial Black",
         })
         .setOrigin(0.5)
         .setDepth(100)
-        .setAlpha(0);
+        .setAlpha(0)
+        .setResolution(dpr);
 
       countdownText = this.add
         .text(width / 2, height / 2, "", {
-          fontSize: `${isMobile ? 30 * dpr : 120 * dpr}px`,
+          fontSize: `${isMobile ? 30 : 120}px`,
           fill: "#00ffff",
           fontFamily: "Arial Black",
         })
         .setOrigin(0.5)
-        .setDepth(100);
+        .setDepth(100)
+        .setResolution(dpr);
 
       let count = 3;
       const timer = this.time.addEvent({

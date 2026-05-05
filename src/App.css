@@ -34,6 +34,7 @@ html {
 
 canvas {
   display: block;
+  image-rendering: auto;
   touch-action: none; /* Гарантує, що Phaser отримає всі тач-події */
   -webkit-tap-highlight-color: transparent; /* Прибирає синю рамку при натисканні на iOS/Android */
 }
