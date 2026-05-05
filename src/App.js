@@ -41,7 +41,7 @@ function App() {
       progressText,
       landingText,
       countdownText,
-      cursors; //[cite: 2] Додано змінну в загальну область видимості
+      cursors;
     let isGameStarted = false;
     let isGameOver = false;
     let currentAcceleration = 0;
@@ -70,7 +70,6 @@ function App() {
       currentAcceleration = 0;
       lastAsteroidTime = 0;
 
-      // КРОК 1: Ініціалізація керування один раз при створенні сцени[cite: 2]
       cursors = this.input.keyboard.createCursorKeys();
 
       const dot = this.make.graphics({ x: 0, y: 0, add: false });
@@ -264,7 +263,10 @@ function App() {
 
     function update(time, delta) {
       if (!isGameStarted || isGameOver) return;
-      const dt = delta / 16.66;
+
+      // КРОК 2: Обмежуємо delta, щоб уникнути стрибків при лагах
+      const dt = Math.min(delta / 16.66, 2);
+
       const width = this.cameras.main.width;
       const height = this.cameras.main.height;
       const isMobile = window.innerWidth < 768;
@@ -343,7 +345,6 @@ function App() {
         progressText.setText(`${Math.round(progress * 100)}%`);
 
         const pointer = this.input.activePointer;
-        // КРОК 1: Видалено створення createCursorKeys() з update[cite: 2]
 
         if (cursors.left.isDown || (pointer.isDown && pointer.x < width / 2)) {
           ship.setAccelerationX((isMobile ? -1600 : -2400) * dpr);
