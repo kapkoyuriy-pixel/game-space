@@ -7,19 +7,19 @@ function App() {
   const gameRef = useRef(null);
 
   useEffect(() => {
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
     const config = {
       type: Phaser.AUTO,
-      width: window.innerWidth * dpr,
-      height: window.innerHeight * dpr,
       parent: gameRef.current,
-      canvasStyle: `width: 100%; height: 100%;`,
+      canvasStyle: "width: 100%; height: 100%;",
       pixelArt: false,
       antialias: true,
       scale: {
-        mode: Phaser.Scale.NONE,
+        mode: Phaser.Scale.RESIZE,
         autoCenter: Phaser.Scale.CENTER_BOTH,
+        width: window.innerWidth * dpr,
+        height: window.innerHeight * dpr,
       },
       physics: {
         default: "arcade",
@@ -89,11 +89,11 @@ function App() {
         .setScale(0.005)
         .setAlpha(0.3)
         .setTint(0xaaaaaa);
-      planetParallax.maxPlanetScale = (isMobile ? 0.5 : 0.7) * dpr;
+      planetParallax.maxPlanetScale = width / planetParallax.width;
       planetParallax.isWin = false;
 
       dustParticles = this.add.group();
-      for (let i = 0; i < (isMobile ? 80 : 120); i++) {
+      for (let i = 0; i < (isMobile ? 10 : 120); i++) {
         let dust = this.add.circle(
           Phaser.Math.Between(0, width),
           Phaser.Math.Between(0, height),
@@ -107,12 +107,12 @@ function App() {
       }
 
       starParticles = this.add.group();
-      for (let i = 0; i < (isMobile ? 50 : 80); i++) {
+      for (let i = 0; i < (isMobile ? 8 : 80); i++) {
         let star = this.add.circle(
           Phaser.Math.Between(0, width),
           Phaser.Math.Between(0, height),
           0.6 * dpr,
-          0xffffff,
+          0xbc88ff,
           0.8,
         );
         star.setDepth(1.9).setAlpha(0);
@@ -127,7 +127,7 @@ function App() {
         const line = this.add.rectangle(
           Phaser.Math.Between(0, width),
           Phaser.Math.Between(0, height),
-          1.5 * dpr,
+          (isMobile ? 0.8 : 1.5) * dpr,
           lineLen,
           0xaa55ff,
           0.8,
@@ -138,14 +138,14 @@ function App() {
       }
 
       ship = this.physics.add
-        .sprite(width / 2, height * 0.85, "ship")
+        .sprite(width / 2, isMobile ? height * 0.8 : height * 0.85, "ship")
         .setDepth(12)
-        .setScale(0.15 * uiScale);
+        .setScale((isMobile ? 0.12 : 0.15) * uiScale);
       ship
         .setCollideWorldBounds(true)
         .setDamping(true)
         .setDrag(0.95)
-        .setMaxVelocity(800 * dpr);
+        .setMaxVelocity((isMobile ? 400 : 800) * dpr);
 
       ship.fireEmitter = this.add
         .particles(0, 0, "fireDot", {
@@ -164,23 +164,24 @@ function App() {
 
       asteroids = this.physics.add.group();
 
-      const barWidth = (isMobile ? window.innerWidth * 0.5 : 280) * dpr;
+      const barWidth = isMobile ? width * 0.5 : 280 * dpr;
       const barX = (isMobile ? 20 : 80) * dpr;
-      const barY = 30 * dpr;
+      const barY = (isMobile ? 15 : 30) * dpr;
+      const barHeight = (isMobile ? 4 : 8) * dpr;
 
       this.add
         .rectangle(
           barX + barWidth / 2,
           barY + 5,
           barWidth,
-          8 * dpr,
+          barHeight,
           0x000000,
           0.5,
         )
         .setStrokeStyle(1 * dpr, 0x00ffff)
         .setDepth(20);
       progressBar = this.add
-        .rectangle(barX, barY + 5, 0, 8 * dpr, 0x00ffff)
+        .rectangle(barX, barY + 5, 0, barHeight, 0x00ffff)
         .setOrigin(0, 0.5)
         .setDepth(21);
 
@@ -205,7 +206,7 @@ function App() {
 
       landingText = this.add
         .text(width / 2, height / 2, "Приземлення успішне!", {
-          fontSize: `${(isMobile ? 32 : 64) * dpr}px`,
+          fontSize: `${(isMobile ? 22 : 64) * dpr}px`,
           fill: "#00ffff",
           fontFamily: "Arial Black",
         })
@@ -213,7 +214,7 @@ function App() {
         .setDepth(100)
         .setAlpha(0);
 
-      const countdownSize = isMobile ? 55 * dpr : 120 * dpr;
+      const countdownSize = isMobile ? 30 * dpr : 120 * dpr;
       countdownText = this.add
         .text(width / 2, height / 2, "", {
           fontSize: `${countdownSize}px`,
@@ -258,12 +259,13 @@ function App() {
       });
     }
 
-    function update() {
+    function update(time, delta) {
       if (!isGameStarted || isGameOver) return;
+      const dt = delta / 16.66;
       const width = this.cameras.main.width;
       const height = this.cameras.main.height;
       const isMobile = window.innerWidth < 768;
-      const barWidth = (isMobile ? window.innerWidth * 0.5 : 280) * dpr;
+      const barWidth = isMobile ? width * 0.5 : 280 * dpr;
       const barX = (isMobile ? 20 : 80) * dpr;
 
       const progress = Math.min(
@@ -272,19 +274,23 @@ function App() {
       );
 
       if (progress < 1) {
-        // ЧАС ПОЯВИ: прискорення тепер зростає повільніше (0.005), щоб смуги були в кадрі довше
-        if (currentAcceleration < 2.0) currentAcceleration += 0.005;
-        spaceBack.tilePositionY -= currentAcceleration * 65 * dpr;
-        spaceBackSlow.tilePositionY -= currentAcceleration * 10 * dpr;
+        // ЧАС ПОЯВИ: прискорення тепер зростає повільніше (0.001), щоб смуги були в кадрі довше
+        if (currentAcceleration < (isMobile ? 2.0 : 2.0))
+          currentAcceleration += (isMobile ? 0.005 : 0.005) * dt;
+        spaceBack.tilePositionY -=
+          currentAcceleration * (isMobile ? 30 : 65) * dpr * dt;
+        spaceBackSlow.tilePositionY -=
+          currentAcceleration * (isMobile ? 6 : 10) * dpr * dt;
 
         const vis =
-          currentAcceleration > 0.15
-            ? Math.min(1, (currentAcceleration - 0.15) * 2.0)
+          currentAcceleration > 0.05
+            ? Math.min(1, (currentAcceleration - 0.05) * 2.5)
             : 0;
 
         dustParticles.getChildren().forEach((d) => {
           d.setAlpha(vis * 0.9);
-          d.y += currentAcceleration * 60 * d.speedMult * dpr;
+          d.y +=
+            currentAcceleration * (isMobile ? 30 : 60) * d.speedMult * dpr * dt;
           if (d.y > height) {
             d.y = -20;
             d.x = Phaser.Math.Between(0, width);
@@ -293,7 +299,8 @@ function App() {
 
         starParticles.getChildren().forEach((s) => {
           s.setAlpha(vis * 0.7);
-          s.y += currentAcceleration * 40 * s.speedMult * dpr;
+          s.y +=
+            currentAcceleration * (isMobile ? 20 : 40) * s.speedMult * dpr * dt;
           if (s.y > height) {
             s.y = -20;
             s.x = Phaser.Math.Between(0, width);
@@ -302,9 +309,14 @@ function App() {
 
         speedLines.getChildren().forEach((line) => {
           // СМУГИ З'ЯВЛЯЮТЬСЯ РАНІШЕ І ТРИВАЮТЬ ДОВШЕ
-          if (currentAcceleration > 0.2) {
+          if (currentAcceleration > 0.1) {
             line.setAlpha(vis * 0.8);
-            line.y += currentAcceleration * 450 * line.speedMult * dpr;
+            line.y +=
+              currentAcceleration *
+              (isMobile ? 450 : 450) *
+              line.speedMult *
+              dpr *
+              dt;
             if (line.y > height) {
               line.y = -height * 0.4;
               line.x = Phaser.Math.Between(0, width);
@@ -319,7 +331,7 @@ function App() {
           planetParallax.setScale(
             0.005 * dpr +
               (planetParallax.maxPlanetScale - 0.005 * dpr) *
-                Math.pow(adj, 1.2),
+                Math.pow(adj, 2.5),
           );
           planetParallax.setAlpha(Math.min(1, 0.3 + adj * 2));
         }
@@ -333,12 +345,12 @@ function App() {
         const cursors = this.input.keyboard.createCursorKeys();
 
         if (cursors.left.isDown || (pointer.isDown && pointer.x < width / 2)) {
-          ship.setAccelerationX(-2400 * dpr);
+          ship.setAccelerationX((isMobile ? -1600 : -2400) * dpr);
         } else if (
           cursors.right.isDown ||
           (pointer.isDown && pointer.x >= width / 2)
         ) {
-          ship.setAccelerationX(2400 * dpr);
+          ship.setAccelerationX((isMobile ? 1600 : 2400) * dpr);
         } else {
           ship.setAccelerationX(0);
         }
@@ -356,10 +368,14 @@ function App() {
           );
           const astScale =
             (isMobile
-              ? Phaser.Math.FloatBetween(0.15, 0.25)
+              ? Phaser.Math.FloatBetween(0.1, 0.2)
               : Phaser.Math.FloatBetween(0.4, 0.7)) * dpr;
           ast
-            .setVelocityY(Phaser.Math.Between(250, 500) * dpr)
+            .setVelocityY(
+              (isMobile
+                ? Phaser.Math.Between(120, 250)
+                : Phaser.Math.Between(250, 500)) * dpr,
+            )
             .setScale(astScale)
             .setDepth(1.5);
           ast.body.setCircle(ast.width * 0.35);
