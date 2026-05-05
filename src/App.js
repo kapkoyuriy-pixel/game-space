@@ -216,10 +216,10 @@ function App() {
         .setDepth(100)
         .setAlpha(0);
 
-      const countdownSize = isMobile ? 30 * dpr : 120 * dpr;
+      const countdownTextSize = isMobile ? 30 * dpr : 120 * dpr;
       countdownText = this.add
         .text(width / 2, height / 2, "", {
-          fontSize: `${countdownSize}px`,
+          fontSize: `${countdownTextSize}px`,
           fill: "#00ffff",
           fontFamily: "Arial Black",
         })
@@ -264,7 +264,6 @@ function App() {
     function update(time, delta) {
       if (!isGameStarted || isGameOver) return;
 
-      // КРОК 2: Обмежуємо delta, щоб уникнути стрибків при лагах
       const dt = Math.min(delta / 16.66, 2);
 
       const width = this.cameras.main.width;
@@ -346,16 +345,26 @@ function App() {
 
         const pointer = this.input.activePointer;
 
+        // --- КРОК 3: Магія LERP для плавного руху ---
+        let targetAccelerationX = 0;
         if (cursors.left.isDown || (pointer.isDown && pointer.x < width / 2)) {
-          ship.setAccelerationX((isMobile ? -1600 : -2400) * dpr);
+          targetAccelerationX = (isMobile ? -1600 : -2400) * dpr;
         } else if (
           cursors.right.isDown ||
           (pointer.isDown && pointer.x >= width / 2)
         ) {
-          ship.setAccelerationX((isMobile ? 1600 : 2400) * dpr);
-        } else {
-          ship.setAccelerationX(0);
+          targetAccelerationX = (isMobile ? 1600 : 2400) * dpr;
         }
+
+        // Плавно змінюємо поточне прискорення до цільового[cite: 4]
+        const lerpFactor = 0.15;
+        const newAccelerationX = Phaser.Math.Linear(
+          ship.body.acceleration.x,
+          targetAccelerationX,
+          lerpFactor * dt,
+        );
+        ship.setAccelerationX(newAccelerationX);
+        // -------------------------------------------
 
         ship.angle = (ship.body.velocity.x * 0.07) / dpr;
 
