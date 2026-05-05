@@ -144,8 +144,6 @@ function App() {
         .sprite(width / 2, isMobile ? height * 0.8 : height * 0.85, "ship")
         .setDepth(12)
         .setScale((isMobile ? 0.12 : 0.15) * uiScale);
-
-      // Фіксована швидкість без dpr[cite: 4]
       ship
         .setCollideWorldBounds(true)
         .setDamping(true)
@@ -198,6 +196,7 @@ function App() {
         .image(barX + barWidth + 25 * dpr, barY + 5, "planet")
         .setScale(0.015 * uiScale)
         .setDepth(22);
+
       progressText = this.add
         .text(barX + barWidth + 40 * dpr, barY + 5, "0%", {
           fontSize: `${16 * uiScale}px`,
@@ -206,6 +205,7 @@ function App() {
         })
         .setOrigin(0, 0.5)
         .setDepth(20);
+
       landingText = this.add
         .text(width / 2, height / 2, "Приземлення успішне!", {
           fontSize: `${(isMobile ? 22 : 64) * dpr}px`,
@@ -270,9 +270,11 @@ function App() {
       );
 
       if (progress < 1) {
-        // Плавне наростання швидкості фону
-        const maxAccel = isMobile ? 1.8 : 2.0;
-        if (currentAcceleration < maxAccel) currentAcceleration += 0.005 * dt;
+        // --- ЛОГІКА ВІД КЛОДА ---
+        const maxAccel = isMobile ? 1.5 : 2.0;
+        const accelSpeed = isMobile ? 0.003 : 0.005;
+        if (currentAcceleration < maxAccel)
+          currentAcceleration += accelSpeed * dt;
 
         spaceBack.tilePositionY -=
           currentAcceleration * (isMobile ? 30 : 65) * dt;
@@ -293,13 +295,43 @@ function App() {
           }
         });
 
+        // Управління кораблем з інтерполяцією[cite: 4]
+        let targetAccelX = 0;
+        const pointer = this.input.activePointer;
+        const cursorsInput = this.input.keyboard.createCursorKeys();
+
+        if (
+          cursorsInput.left.isDown ||
+          (pointer.isDown && pointer.x < width / 2)
+        ) {
+          targetAccelX = (isMobile ? -1200 : -2400) * dpr;
+        } else if (
+          cursorsInput.right.isDown ||
+          (pointer.isDown && pointer.x >= width / 2)
+        ) {
+          targetAccelX = (isMobile ? 1200 : 2400) * dpr;
+        }
+
+        const currentAccelX = ship.body.acceleration.x || 0;
+        const smoothAccelX = Phaser.Math.Linear(
+          currentAccelX,
+          targetAccelX,
+          0.15,
+        );
+        ship.setAccelerationX(smoothAccelX);
+
+        // Плавний поворот[cite: 4]
+        const targetAngle = (ship.body.velocity.x * 0.05) / dpr;
+        ship.angle = Phaser.Math.Linear(ship.angle, targetAngle, 0.2);
+
         speedLines.getChildren().forEach((line) => {
           if (currentAcceleration > 0.1) {
             line.setAlpha(vis * 0.8);
             line.y +=
               currentAcceleration *
-              (isMobile ? 300 : 450) *
+              (isMobile ? 250 : 450) *
               line.speedMult *
+              dpr *
               dt;
             if (line.y > height) {
               line.y = -height * 0.4;
@@ -309,6 +341,7 @@ function App() {
             line.setAlpha(0);
           }
         });
+        // --- КІНЕЦЬ ЛОГІКИ КЛОДА ---
 
         if (progress > 0.07) {
           const adj = (progress - 0.07) / 0.93;
@@ -321,32 +354,11 @@ function App() {
         }
         planetParallax.y = height * 0.4 + height * 0.1 * progress;
 
-        progressBar.width = (isMobile ? width * 0.5 : 280 * dpr) * progress;
-        uiShip.x = (isMobile ? 20 : 80) * dpr + progressBar.width;
+        const barWidth = isMobile ? width * 0.5 : 280 * dpr;
+        const barX = (isMobile ? 20 : 80) * dpr;
+        progressBar.width = barWidth * progress;
+        uiShip.x = barX + barWidth * progress;
         progressText.setText(`${Math.round(progress * 100)}%`);
-
-        // --- ГІБРИДНЕ КЕРУВАННЯ (Драйв + Плавність) ---
-        let targetAccelX = 0;
-        const pointer = this.input.activePointer;
-        if (cursors.left.isDown || (pointer.isDown && pointer.x < width / 2)) {
-          targetAccelX = isMobile ? -3500 : -2400; // Повертаємо потужність[cite: 4]
-        } else if (
-          cursors.right.isDown ||
-          (pointer.isDown && pointer.x >= width / 2)
-        ) {
-          targetAccelX = isMobile ? 3500 : 2400;
-        }
-
-        const smoothAccelX = Phaser.Math.Linear(
-          ship.body.acceleration.x,
-          targetAccelX,
-          0.15 * dt,
-        );
-        ship.setAccelerationX(smoothAccelX);
-
-        // Плавний нахил від Клода
-        const targetAngle = ship.body.velocity.x * 0.07;
-        ship.angle = Phaser.Math.Linear(ship.angle, targetAngle, 0.1 * dt);
 
         const spawnInterval = isMobile ? 650 : 350;
         if (this.time.now > lastAsteroidTime + spawnInterval) {
