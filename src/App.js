@@ -61,7 +61,6 @@ function App() {
       const width = this.cameras.main.width;
       const height = this.cameras.main.height;
       const isMobile = window.innerWidth < 768;
-
       const baseScale = isMobile ? Math.min(window.innerWidth / 400, 0.6) : 1.0;
       const uiScale = baseScale * dpr;
 
@@ -69,7 +68,6 @@ function App() {
       isGameOver = false;
       currentAcceleration = 0;
       lastAsteroidTime = 0;
-
       cursors = this.input.keyboard.createCursorKeys();
 
       const dot = this.make.graphics({ x: 0, y: 0, add: false });
@@ -147,12 +145,12 @@ function App() {
         .setDepth(12)
         .setScale((isMobile ? 0.12 : 0.15) * uiScale);
 
-      // КРОК 5: Прибираємо dpr з фізичних параметрів корабля[cite: 4]
+      // Фіксована швидкість без dpr[cite: 4]
       ship
         .setCollideWorldBounds(true)
         .setDamping(true)
         .setDrag(0.95)
-        .setMaxVelocity(isMobile ? 400 : 800);
+        .setMaxVelocity(isMobile ? 800 : 800);
 
       ship.fireEmitter = this.add
         .particles(0, 0, "fireDot", {
@@ -160,7 +158,7 @@ function App() {
           colorEase: "quad.out",
           lifespan: 250,
           angle: { min: 85, max: 95 },
-          speed: { min: 300, max: 600 }, // Прибрано dpr[cite: 4]
+          speed: { min: 300, max: 600 },
           scale: { start: 1.2 * uiScale, end: 0, ease: "sine.in" },
           blendMode: "ADD",
           follow: ship,
@@ -191,7 +189,6 @@ function App() {
         .rectangle(barX, barY + 5, 0, barHeight, 0x00ffff)
         .setOrigin(0, 0.5)
         .setDepth(21);
-
       uiShip = this.add
         .image(barX, barY + 5, "ship")
         .setScale(0.05 * uiScale)
@@ -201,7 +198,6 @@ function App() {
         .image(barX + barWidth + 25 * dpr, barY + 5, "planet")
         .setScale(0.015 * uiScale)
         .setDepth(22);
-
       progressText = this.add
         .text(barX + barWidth + 40 * dpr, barY + 5, "0%", {
           fontSize: `${16 * uiScale}px`,
@@ -210,7 +206,6 @@ function App() {
         })
         .setOrigin(0, 0.5)
         .setDepth(20);
-
       landingText = this.add
         .text(width / 2, height / 2, "Приземлення успішне!", {
           fontSize: `${(isMobile ? 22 : 64) * dpr}px`,
@@ -221,10 +216,9 @@ function App() {
         .setDepth(100)
         .setAlpha(0);
 
-      const countdownTextSize = isMobile ? 30 * dpr : 120 * dpr;
       countdownText = this.add
         .text(width / 2, height / 2, "", {
-          fontSize: `${countdownTextSize}px`,
+          fontSize: `${isMobile ? 30 * dpr : 120 * dpr}px`,
           fill: "#00ffff",
           fontFamily: "Arial Black",
         })
@@ -240,7 +234,7 @@ function App() {
             countdownText.setText("ПОЛЕТІЛИ!");
             count--;
           } else {
-            if (countdownText) countdownText.destroy();
+            countdownText.destroy();
             isGameStarted = true;
             ship.fireEmitter.start();
             planetParallax.spawnTime = this.time.now / 1000;
@@ -254,9 +248,6 @@ function App() {
         if (!planetParallax.isWin && isGameStarted && !isGameOver) {
           isGameOver = true;
           this.cameras.main.flash(500, 0, 255, 255);
-          this.time.delayedCall(700, () => {
-            this.cameras.main.flash(800, 0, 255, 255);
-          });
           this.physics.pause();
           ship.fireEmitter.stop();
           this.time.delayedCall(1600, () => {
@@ -268,14 +259,10 @@ function App() {
 
     function update(time, delta) {
       if (!isGameStarted || isGameOver) return;
-
       const dt = Math.min(delta / 16.66, 2);
-
       const width = this.cameras.main.width;
       const height = this.cameras.main.height;
       const isMobile = window.innerWidth < 768;
-      const barWidth = isMobile ? width * 0.5 : 280 * dpr;
-      const barX = (isMobile ? 20 : 80) * dpr;
 
       const progress = Math.min(
         1,
@@ -283,9 +270,10 @@ function App() {
       );
 
       if (progress < 1) {
-        if (currentAcceleration < 2.0) currentAcceleration += 0.005 * dt;
+        // Плавне наростання швидкості фону
+        const maxAccel = isMobile ? 1.8 : 2.0;
+        if (currentAcceleration < maxAccel) currentAcceleration += 0.005 * dt;
 
-        // КРОК 5: Прибираємо dpr з розрахунку руху фону та частинок[cite: 4]
         spaceBack.tilePositionY -=
           currentAcceleration * (isMobile ? 30 : 65) * dt;
         spaceBackSlow.tilePositionY -=
@@ -305,21 +293,12 @@ function App() {
           }
         });
 
-        starParticles.getChildren().forEach((s) => {
-          s.setAlpha(vis * 0.7);
-          s.y += currentAcceleration * (isMobile ? 20 : 40) * s.speedMult * dt;
-          if (s.y > height) {
-            s.y = -20;
-            s.x = Phaser.Math.Between(0, width);
-          }
-        });
-
         speedLines.getChildren().forEach((line) => {
           if (currentAcceleration > 0.1) {
             line.setAlpha(vis * 0.8);
             line.y +=
               currentAcceleration *
-              (isMobile ? 450 : 450) *
+              (isMobile ? 300 : 450) *
               line.speedMult *
               dt;
             if (line.y > height) {
@@ -342,36 +321,36 @@ function App() {
         }
         planetParallax.y = height * 0.4 + height * 0.1 * progress;
 
-        progressBar.width = barWidth * progress;
-        uiShip.x = barX + barWidth * progress;
+        progressBar.width = (isMobile ? width * 0.5 : 280 * dpr) * progress;
+        uiShip.x = (isMobile ? 20 : 80) * dpr + progressBar.width;
         progressText.setText(`${Math.round(progress * 100)}%`);
 
+        // --- ГІБРИДНЕ КЕРУВАННЯ (Драйв + Плавність) ---
+        let targetAccelX = 0;
         const pointer = this.input.activePointer;
-
-        let targetAccelerationX = 0;
         if (cursors.left.isDown || (pointer.isDown && pointer.x < width / 2)) {
-          targetAccelerationX = isMobile ? -1600 : -2400; // Прибрано dpr[cite: 4]
+          targetAccelX = isMobile ? -3500 : -2400; // Повертаємо потужність[cite: 4]
         } else if (
           cursors.right.isDown ||
           (pointer.isDown && pointer.x >= width / 2)
         ) {
-          targetAccelerationX = isMobile ? 1600 : 2400; // Прибрано dpr[cite: 4]
+          targetAccelX = isMobile ? 3500 : 2400;
         }
 
-        const lerpFactor = 0.15;
-        const newAccelerationX = Phaser.Math.Linear(
+        const smoothAccelX = Phaser.Math.Linear(
           ship.body.acceleration.x,
-          targetAccelerationX,
-          lerpFactor * dt,
+          targetAccelX,
+          0.15 * dt,
         );
-        ship.setAccelerationX(newAccelerationX);
+        ship.setAccelerationX(smoothAccelX);
 
-        ship.angle = ship.body.velocity.x * 0.07; // Прибрано dpr[cite: 4]
+        // Плавний нахил від Клода
+        const targetAngle = ship.body.velocity.x * 0.07;
+        ship.angle = Phaser.Math.Linear(ship.angle, targetAngle, 0.1 * dt);
 
         const spawnInterval = isMobile ? 650 : 350;
         if (this.time.now > lastAsteroidTime + spawnInterval) {
           lastAsteroidTime = this.time.now;
-          // КРОК 5: Координати спавну мають враховувати dpr для візуального попадання в межі екрану[cite: 4]
           let spawnX = Phaser.Math.Between(30 * dpr, width - 30 * dpr);
           const ast = asteroids.create(
             spawnX,
@@ -385,12 +364,12 @@ function App() {
           ast
             .setVelocityY(
               isMobile
-                ? Phaser.Math.Between(120, 250)
-                : Phaser.Math.Between(250, 500), // Прибрано dpr[cite: 4]
+                ? Phaser.Math.Between(150, 300)
+                : Phaser.Math.Between(250, 500),
             )
             .setScale(astScale)
             .setDepth(1.5);
-          ast.body.setCircle((ast.width / dpr) * 0.35); // Коригуємо радіус колізії[cite: 4]
+          ast.body.setCircle((ast.width / dpr) * 0.35);
           ast.setAngularVelocity(Phaser.Math.Between(-50, 50));
         }
       } else if (!planetParallax.isWin) {
