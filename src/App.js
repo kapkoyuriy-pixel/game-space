@@ -123,8 +123,10 @@ function App() {
         starParticles.add(star);
       }
 
+      // --- КРОК 4: Візуальна чистота (Speedlines) ---
       speedLines = this.add.group();
-      for (let i = 0; i < 150; i++) {
+      const lineCount = isMobile ? 40 : 150; // Зменшено кількість для мобілок[cite: 4]
+      for (let i = 0; i < lineCount; i++) {
         const lineLen = Phaser.Math.Between(height * 0.1, height * 0.33);
         const line = this.add.rectangle(
           Phaser.Math.Between(0, width),
@@ -135,9 +137,13 @@ function App() {
           0.8,
         );
         line.setDepth(2.1).setAlpha(0);
-        line.speedMult = Phaser.Math.FloatBetween(5.0, 9.0);
+        // Зменшено швидкість для мобілок[cite: 4]
+        line.speedMult = isMobile
+          ? Phaser.Math.FloatBetween(3.0, 5.0)
+          : Phaser.Math.FloatBetween(5.0, 9.0);
         speedLines.add(line);
       }
+      // ----------------------------------------------
 
       ship = this.physics.add
         .sprite(width / 2, isMobile ? height * 0.8 : height * 0.85, "ship")
@@ -345,7 +351,6 @@ function App() {
 
         const pointer = this.input.activePointer;
 
-        // --- КРОК 3: Магія LERP для плавного руху ---
         let targetAccelerationX = 0;
         if (cursors.left.isDown || (pointer.isDown && pointer.x < width / 2)) {
           targetAccelerationX = (isMobile ? -1600 : -2400) * dpr;
@@ -356,7 +361,6 @@ function App() {
           targetAccelerationX = (isMobile ? 1600 : 2400) * dpr;
         }
 
-        // Плавно змінюємо поточне прискорення до цільового[cite: 4]
         const lerpFactor = 0.15;
         const newAccelerationX = Phaser.Math.Linear(
           ship.body.acceleration.x,
@@ -364,7 +368,6 @@ function App() {
           lerpFactor * dt,
         );
         ship.setAccelerationX(newAccelerationX);
-        // -------------------------------------------
 
         ship.angle = (ship.body.velocity.x * 0.07) / dpr;
 
