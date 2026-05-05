@@ -1,11 +1,12 @@
-/* App.css */
+/* App.css - Final Optimized Version */
 
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  -webkit-touch-callout: none; /* Вимикає системне меню при довгому натисканні */
-  -webkit-user-select: none; /* Вимикає виділення тексту */
+  /* Вимикає системні меню та виділення для повного занурення в гру */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
   user-select: none;
 }
 
@@ -16,8 +17,10 @@ html {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  position: fixed; /* Фіксує екран, щоб запобігти свайпам "назад" або "оновлення" */
+  position: fixed; /* Фіксація від випадкових свайпів */
   background-color: #000;
+  /* Вимикає ефект "резинки" при скролі на iOS та Android */
+  overscroll-behavior: none;
 }
 
 #root,
@@ -29,11 +32,21 @@ html {
   align-items: center;
   overflow: hidden;
   background-color: #000;
-  touch-action: none; /* Вимикає стандартні жести браузера (зум, панорама) */
+  /* Передає всі торкання безпосередньо в гру */
+  touch-action: none;
 }
 
 canvas {
   display: block;
-  touch-action: none; /* Гарантує, що Phaser отримає всі тач-події */
-  -webkit-tap-highlight-color: transparent; /* Прибирає синю рамку при натисканні на iOS/Android */
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+
+  /* ПРИНЦИП ЧІТКОСТІ (Pixel Matching) */
+  /* Прибирає "мило" та робить краї спрайтів гострими */
+  image-rendering: -webkit-optimize-contrast; /* Для Safari/iOS */
+  image-rendering: crisp-edges;               /* Для Firefox */
+  image-rendering: pixelated;                 /* Для Chrome/Android */
+  
+  /* Гарантує плавне відображення на iPhone */
+  -webkit-overflow-scrolling: touch;
 }
