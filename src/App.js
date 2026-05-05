@@ -123,9 +123,8 @@ function App() {
         starParticles.add(star);
       }
 
-      // --- КРОК 4: Візуальна чистота (Speedlines) ---
       speedLines = this.add.group();
-      const lineCount = isMobile ? 40 : 150; // Зменшено кількість для мобілок[cite: 4]
+      const lineCount = isMobile ? 40 : 150;
       for (let i = 0; i < lineCount; i++) {
         const lineLen = Phaser.Math.Between(height * 0.1, height * 0.33);
         const line = this.add.rectangle(
@@ -137,23 +136,23 @@ function App() {
           0.8,
         );
         line.setDepth(2.1).setAlpha(0);
-        // Зменшено швидкість для мобілок[cite: 4]
         line.speedMult = isMobile
           ? Phaser.Math.FloatBetween(3.0, 5.0)
           : Phaser.Math.FloatBetween(5.0, 9.0);
         speedLines.add(line);
       }
-      // ----------------------------------------------
 
       ship = this.physics.add
         .sprite(width / 2, isMobile ? height * 0.8 : height * 0.85, "ship")
         .setDepth(12)
         .setScale((isMobile ? 0.12 : 0.15) * uiScale);
+
+      // КРОК 5: Прибираємо dpr з фізичних параметрів корабля[cite: 4]
       ship
         .setCollideWorldBounds(true)
         .setDamping(true)
         .setDrag(0.95)
-        .setMaxVelocity((isMobile ? 400 : 800) * dpr);
+        .setMaxVelocity(isMobile ? 400 : 800);
 
       ship.fireEmitter = this.add
         .particles(0, 0, "fireDot", {
@@ -161,7 +160,7 @@ function App() {
           colorEase: "quad.out",
           lifespan: 250,
           angle: { min: 85, max: 95 },
-          speed: { min: 300 * dpr, max: 600 * dpr },
+          speed: { min: 300, max: 600 }, // Прибрано dpr[cite: 4]
           scale: { start: 1.2 * uiScale, end: 0, ease: "sine.in" },
           blendMode: "ADD",
           follow: ship,
@@ -284,12 +283,13 @@ function App() {
       );
 
       if (progress < 1) {
-        if (currentAcceleration < (isMobile ? 2.0 : 2.0))
-          currentAcceleration += (isMobile ? 0.005 : 0.005) * dt;
+        if (currentAcceleration < 2.0) currentAcceleration += 0.005 * dt;
+
+        // КРОК 5: Прибираємо dpr з розрахунку руху фону та частинок[cite: 4]
         spaceBack.tilePositionY -=
-          currentAcceleration * (isMobile ? 30 : 65) * dpr * dt;
+          currentAcceleration * (isMobile ? 30 : 65) * dt;
         spaceBackSlow.tilePositionY -=
-          currentAcceleration * (isMobile ? 6 : 10) * dpr * dt;
+          currentAcceleration * (isMobile ? 6 : 10) * dt;
 
         const vis =
           currentAcceleration > 0.05
@@ -298,8 +298,7 @@ function App() {
 
         dustParticles.getChildren().forEach((d) => {
           d.setAlpha(vis * 0.9);
-          d.y +=
-            currentAcceleration * (isMobile ? 30 : 60) * d.speedMult * dpr * dt;
+          d.y += currentAcceleration * (isMobile ? 30 : 60) * d.speedMult * dt;
           if (d.y > height) {
             d.y = -20;
             d.x = Phaser.Math.Between(0, width);
@@ -308,8 +307,7 @@ function App() {
 
         starParticles.getChildren().forEach((s) => {
           s.setAlpha(vis * 0.7);
-          s.y +=
-            currentAcceleration * (isMobile ? 20 : 40) * s.speedMult * dpr * dt;
+          s.y += currentAcceleration * (isMobile ? 20 : 40) * s.speedMult * dt;
           if (s.y > height) {
             s.y = -20;
             s.x = Phaser.Math.Between(0, width);
@@ -323,7 +321,6 @@ function App() {
               currentAcceleration *
               (isMobile ? 450 : 450) *
               line.speedMult *
-              dpr *
               dt;
             if (line.y > height) {
               line.y = -height * 0.4;
@@ -353,12 +350,12 @@ function App() {
 
         let targetAccelerationX = 0;
         if (cursors.left.isDown || (pointer.isDown && pointer.x < width / 2)) {
-          targetAccelerationX = (isMobile ? -1600 : -2400) * dpr;
+          targetAccelerationX = isMobile ? -1600 : -2400; // Прибрано dpr[cite: 4]
         } else if (
           cursors.right.isDown ||
           (pointer.isDown && pointer.x >= width / 2)
         ) {
-          targetAccelerationX = (isMobile ? 1600 : 2400) * dpr;
+          targetAccelerationX = isMobile ? 1600 : 2400; // Прибрано dpr[cite: 4]
         }
 
         const lerpFactor = 0.15;
@@ -369,11 +366,12 @@ function App() {
         );
         ship.setAccelerationX(newAccelerationX);
 
-        ship.angle = (ship.body.velocity.x * 0.07) / dpr;
+        ship.angle = ship.body.velocity.x * 0.07; // Прибрано dpr[cite: 4]
 
         const spawnInterval = isMobile ? 650 : 350;
         if (this.time.now > lastAsteroidTime + spawnInterval) {
           lastAsteroidTime = this.time.now;
+          // КРОК 5: Координати спавну мають враховувати dpr для візуального попадання в межі екрану[cite: 4]
           let spawnX = Phaser.Math.Between(30 * dpr, width - 30 * dpr);
           const ast = asteroids.create(
             spawnX,
@@ -386,13 +384,13 @@ function App() {
               : Phaser.Math.FloatBetween(0.4, 0.7)) * dpr;
           ast
             .setVelocityY(
-              (isMobile
+              isMobile
                 ? Phaser.Math.Between(120, 250)
-                : Phaser.Math.Between(250, 500)) * dpr,
+                : Phaser.Math.Between(250, 500), // Прибрано dpr[cite: 4]
             )
             .setScale(astScale)
             .setDepth(1.5);
-          ast.body.setCircle(ast.width * 0.35);
+          ast.body.setCircle((ast.width / dpr) * 0.35); // Коригуємо радіус колізії[cite: 4]
           ast.setAngularVelocity(Phaser.Math.Between(-50, 50));
         }
       } else if (!planetParallax.isWin) {
