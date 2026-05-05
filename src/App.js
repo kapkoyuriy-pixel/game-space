@@ -40,7 +40,8 @@ function App() {
       uiShip,
       progressText,
       landingText,
-      countdownText;
+      countdownText,
+      cursors; //[cite: 2] Додано змінну в загальну область видимості
     let isGameStarted = false;
     let isGameOver = false;
     let currentAcceleration = 0;
@@ -68,6 +69,9 @@ function App() {
       isGameOver = false;
       currentAcceleration = 0;
       lastAsteroidTime = 0;
+
+      // КРОК 1: Ініціалізація керування один раз при створенні сцени[cite: 2]
+      cursors = this.input.keyboard.createCursorKeys();
 
       const dot = this.make.graphics({ x: 0, y: 0, add: false });
       dot.fillStyle(0xffffff);
@@ -122,7 +126,6 @@ function App() {
 
       speedLines = this.add.group();
       for (let i = 0; i < 150; i++) {
-        // ДОВЖИНА СКОРОЧЕНА: тепер максимум 1/3 екрана
         const lineLen = Phaser.Math.Between(height * 0.1, height * 0.33);
         const line = this.add.rectangle(
           Phaser.Math.Between(0, width),
@@ -274,7 +277,6 @@ function App() {
       );
 
       if (progress < 1) {
-        // ЧАС ПОЯВИ: прискорення тепер зростає повільніше (0.001), щоб смуги були в кадрі довше
         if (currentAcceleration < (isMobile ? 2.0 : 2.0))
           currentAcceleration += (isMobile ? 0.005 : 0.005) * dt;
         spaceBack.tilePositionY -=
@@ -308,7 +310,6 @@ function App() {
         });
 
         speedLines.getChildren().forEach((line) => {
-          // СМУГИ З'ЯВЛЯЮТЬСЯ РАНІШЕ І ТРИВАЮТЬ ДОВШЕ
           if (currentAcceleration > 0.1) {
             line.setAlpha(vis * 0.8);
             line.y +=
@@ -342,7 +343,7 @@ function App() {
         progressText.setText(`${Math.round(progress * 100)}%`);
 
         const pointer = this.input.activePointer;
-        const cursors = this.input.keyboard.createCursorKeys();
+        // КРОК 1: Видалено створення createCursorKeys() з update[cite: 2]
 
         if (cursors.left.isDown || (pointer.isDown && pointer.x < width / 2)) {
           ship.setAccelerationX((isMobile ? -1600 : -2400) * dpr);
