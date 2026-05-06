@@ -261,44 +261,29 @@ function App() {
         // Плавне керування з інтерполяцією (як у ГД)
         let targetAccelX = 0;
         const pointer = this.input.activePointer;
-
-        const controlPower = 2400 * dpr; // одинаково для всех
-
         if (cursors.left.isDown || (pointer.isDown && pointer.x < width / 2)) {
-          targetAccelX = -controlPower;
+          targetAccelX = (isMobile ? -1000 : -2400) * dpr;
         } else if (
           cursors.right.isDown ||
           (pointer.isDown && pointer.x >= width / 2)
         ) {
-          targetAccelX = controlPower;
+          targetAccelX = (isMobile ? 1000 : 2400) * dpr;
         }
 
         const currentAccelX = ship.body.acceleration.x || 0;
-
-        const accelLerp = isMobile ? 0.22 : 0.15;
-
         const smoothAccelX = Phaser.Math.Linear(
           currentAccelX,
           targetAccelX,
-          accelLerp,
+          0.15,
         );
-
         ship.setAccelerationX(smoothAccelX);
 
         // Поворот залежно від швидкості
-        const inputDir =
-          cursors.left.isDown || (pointer.isDown && pointer.x < width / 2)
-            ? -1
-            : cursors.right.isDown || (pointer.isDown && pointer.x >= width / 2)
-              ? 1
-              : 0;
+        // Вибираємо 0.10 для мобілки і 0.05 для ПК
+        const angleSensitivity = isMobile ? 0.1 : 0.05;
+        const targetAngle = (ship.body.velocity.x * angleSensitivity) / dpr;
+        ship.angle = Phaser.Math.Linear(ship.angle, targetAngle, 0.2);
 
-        const speedFactor = ship.body.velocity.x / (isMobile ? 600 : 900);
-
-        const targetAngle =
-          inputDir * (isMobile ? 25 : 20) + speedFactor * (isMobile ? 18 : 12);
-
-        ship.angle = Phaser.Math.Linear(ship.angle, targetAngle, 0.25);
         if (progress > 0.07) {
           const adj = (progress - 0.07) / 0.93;
           planetParallax.setScale(
