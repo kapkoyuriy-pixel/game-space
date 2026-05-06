@@ -32,7 +32,7 @@ function App() {
         pixelArt: false,
         antialias: true,
         roundPixels: true,
-},
+      },
     };
 
     let ship,
@@ -40,7 +40,6 @@ function App() {
       spaceBack,
       spaceBackSlow,
       planetParallax,
-      speedLines,
       dustParticles,
       starParticles,
       progressBar,
@@ -114,25 +113,6 @@ function App() {
         dustParticles.add(dust);
       }
 
-      speedLines = this.add.group();
-      const lineCount = isMobile ? 40 : 150;
-      for (let i = 0; i < lineCount; i++) {
-        const lineLen = Phaser.Math.Between(height * 0.1, height * 0.33);
-        const line = this.add.rectangle(
-          Phaser.Math.Between(0, width),
-          Phaser.Math.Between(0, height),
-          (isMobile ? 0.8 : 1.5) * dpr,
-          lineLen,
-          0xaa55ff,
-          0.8,
-        );
-        line.setDepth(2.1).setAlpha(0);
-        line.speedMult = isMobile
-          ? Phaser.Math.FloatBetween(3.0, 5.0)
-          : Phaser.Math.FloatBetween(5.0, 9.0);
-        speedLines.add(line);
-      }
-
       ship = this.physics.add
         .sprite(width / 2, isMobile ? height * 0.8 : height * 0.85, "ship")
         .setDepth(12)
@@ -155,30 +135,13 @@ function App() {
           speed: { min: 300 * dpr, max: 600 * dpr },
           scale: { start: 1.2 * uiScale, end: 0, ease: "sine.in" },
           blendMode: "ADD",
-          frequency: 20,
+          frequency: isMobile ? 20 : 20,
+          quantity: isMobile ? 2 : 1,
           follow: ship,
           followOffset: { x: 0, y: 30 * uiScale },
           emitting: false,
         })
         .setDepth(11);
-
-      // Маска кольору морської хвилі при дотику
-      this.input.on("pointerdown", () => {
-        if (isGameStarted && !isGameOver) {
-          ship.setTint(0x00ffff);
-          this.tweens.add({
-            targets: ship,
-            scaleX: ship.scaleX * 1.05,
-            scaleY: ship.scaleY * 1.05,
-            duration: 100,
-            yoyo: true,
-            ease: "Quad.easeOut",
-            onComplete: () => {
-              ship.clearTint();
-            },
-          });
-        }
-      });
 
       asteroids = this.physics.add.group();
 
@@ -220,10 +183,12 @@ function App() {
         .setOrigin(0, 0.5)
         .setDepth(20)
         .setResolution(dpr);
-        
+
       landingText = this.add
         .text(width / 2, height / 2, "Приземлення успішне!", {
-          fontSize: `${isMobile ? 22 : 64}px`,
+          fontSize: `${Math.min(width * 0.08, isMobile ? 28 : 64)}px`,
+          wordWrap: { width: width * 0.9 },
+          align: "center",
           fill: "#00ffff",
           fontFamily: "Arial Black",
         })
@@ -234,7 +199,7 @@ function App() {
 
       countdownText = this.add
         .text(width / 2, height / 2, "", {
-          fontSize: `${isMobile ? 30 : 120}px`,
+          fontSize: `${Math.min(width * 0.2, isMobile ? 60 : 120)}px`,
           fill: "#00ffff",
           fontFamily: "Arial Black",
         })
@@ -264,7 +229,13 @@ function App() {
       this.physics.add.overlap(ship, asteroids, () => {
         if (!planetParallax.isWin && isGameStarted && !isGameOver) {
           isGameOver = true;
-          this.cameras.main.flash(500, 0, 255, 255);
+          this.cameras.main.flash(400, 0, 255, 255);
+          this.cameras.main.shake(300, 0.01);
+
+          this.time.delayedCall(450, () => {
+            this.cameras.main.flash(600, 0, 255, 255);
+            this.cameras.main.shake(400, 0.015);
+          });
           this.physics.pause();
           ship.fireEmitter.stop();
           this.time.delayedCall(1600, () => {
@@ -287,8 +258,9 @@ function App() {
       );
 
       if (progress < 1) {
-        const maxAccel = isMobile ? 1.5 : 2.0;
-        const accelSpeed = isMobile ? 0.003 : 0.005;
+        const maxAccel = 2.0;
+        const accelTime = 3000; // 3 секунды
+        const accelSpeed = maxAccel / (accelTime / 16.66);
         if (currentAcceleration < maxAccel)
           currentAcceleration += accelSpeed * dt;
 
@@ -334,24 +306,6 @@ function App() {
         // Поворот залежно від швидкості
         const targetAngle = (ship.body.velocity.x * 0.05) / dpr;
         ship.angle = Phaser.Math.Linear(ship.angle, targetAngle, 0.2);
-
-        speedLines.getChildren().forEach((line) => {
-          if (currentAcceleration > 0.1) {
-            line.setAlpha(vis * 0.8);
-            line.y +=
-              currentAcceleration *
-              (isMobile ? 250 : 450) *
-              line.speedMult *
-              dpr *
-              dt;
-            if (line.y > height) {
-              line.y = -height * 0.4;
-              line.x = Phaser.Math.Between(0, width);
-            }
-          } else {
-            line.setAlpha(0);
-          }
-        });
 
         if (progress > 0.07) {
           const adj = (progress - 0.07) / 0.93;
