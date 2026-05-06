@@ -76,11 +76,6 @@ function App() {
       lastAsteroidTime = 0;
       cursors = this.input.keyboard.createCursorKeys();
 
-      const dot = this.make.graphics({ x: 0, y: 0, add: false });
-      dot.fillStyle(0xffffff);
-      dot.fillCircle(4, 4, 4);
-      dot.generateTexture("fireDot", 8, 8);
-
       spaceBackSlow = this.add
         .tileSprite(width / 2, height / 2, width, height, "space")
         .setDepth(0);
@@ -124,24 +119,6 @@ function App() {
         .setDamping(true)
         .setDrag(isMobile ? 0.92 : 0.95)
         .setMaxVelocity((isMobile ? 350 : 800) * dpr);
-
-      // Яскравий вогонь
-      ship.fireEmitter = this.add
-        .particles(0, 0, "fireDot", {
-          color: [0xffffff, 0x00ffff, 0x0000ff, 0x000000],
-          colorEase: "quad.out",
-          lifespan: 250,
-          angle: { min: 85, max: 95 },
-          speed: { min: 300 * dpr, max: 600 * dpr },
-          scale: { start: 1.2 * uiScale, end: 0, ease: "sine.in" },
-          blendMode: "ADD",
-          frequency: isMobile ? 20 : 20,
-          quantity: isMobile ? 2 : 1,
-          follow: ship,
-          followOffset: { x: 0, y: 30 * uiScale },
-          emitting: false,
-        })
-        .setDepth(11);
 
       asteroids = this.physics.add.group();
 
@@ -218,7 +195,6 @@ function App() {
           } else {
             countdownText.destroy();
             isGameStarted = true;
-            ship.fireEmitter.start();
             planetParallax.spawnTime = this.time.now / 1000;
             timer.destroy();
           }
@@ -237,7 +213,6 @@ function App() {
             this.cameras.main.shake(400, 0.015);
           });
           this.physics.pause();
-          ship.fireEmitter.stop();
           this.time.delayedCall(1600, () => {
             this.scene.restart();
           });
@@ -358,7 +333,6 @@ function App() {
           y: height / 2,
           scale: 0,
           duration: 2000,
-          onStart: () => ship.fireEmitter.stop(),
           onComplete: () => {
             landingText.setAlpha(1);
           },
