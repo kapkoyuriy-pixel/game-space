@@ -47,6 +47,7 @@ function App() {
       progressText,
       landingText,
       countdownText,
+      fpsText,
       cursors;
     let isGameStarted = false;
     let isGameOver = false;
@@ -218,9 +219,31 @@ function App() {
           });
         }
       });
+
+      //FPS
+      // В create() знайдеш місце, де створюєш fpsText:
+
+      const fpsFontSize = isMobile ? 8 * dpr : 20 * dpr;
+      const fpsOffsetY = isMobile ? 2 * dpr : 2 * dpr; // 2 * dpr підніме майже до самої рамки
+
+      fpsText = this.add
+        .text(width - 5 * dpr, fpsOffsetY, "FPS: 60", {
+          fontSize: `${fpsFontSize}px`,
+          fill: "#00ff00",
+          fontFamily: "Arial",
+          fontWeight: "bold",
+        })
+        .setOrigin(1, 0) // Правий верхній кут тексту стає точкою відліку
+        .setDepth(1000)
+        .setScrollFactor(0)
+        .setResolution(dpr);
     }
 
     function update(time, delta) {
+      if (fpsText) {
+        fpsText.setText(`FPS: ${Math.round(this.game.loop.actualFps)}`);
+      }
+
       if (!isGameStarted || isGameOver) return;
       const dt = Math.min(delta / 16.66, 2);
       const width = this.cameras.main.width;
