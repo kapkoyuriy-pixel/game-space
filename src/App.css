@@ -38,15 +38,7 @@ html {
 
 canvas {
   display: block;
-  touch-action: none;
-  -webkit-tap-highlight-color: transparent;
-
-  /* ПРИНЦИП ЧІТКОСТІ (Pixel Matching) */
-  /* Прибирає "мило" та робить краї спрайтів гострими */
-  image-rendering: -webkit-optimize-contrast; /* Для Safari/iOS */
-  image-rendering: crisp-edges;               /* Для Firefox */
-  image-rendering: pixelated;                 /* Для Chrome/Android */
-  
-  /* Гарантує плавне відображення на iPhone */
-  -webkit-overflow-scrolling: touch;
+  image-rendering: auto;
+  touch-action: none; /* Гарантує, що Phaser отримає всі тач-події */
+  -webkit-tap-highlight-color: transparent; /* Прибирає синю рамку при натисканні на iOS/Android */
 }
