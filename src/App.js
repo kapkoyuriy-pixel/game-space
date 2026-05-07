@@ -53,6 +53,7 @@ function App() {
     let isGameOver = false;
     let currentAcceleration = 0;
     let lastAsteroidTime = 0;
+    let asteroidPatterns = [];
     const publicBase = (process.env.PUBLIC_URL || "").replace(/\/$/, "");
     const asset = (name) => `${publicBase}/${name}`;
 
@@ -115,74 +116,76 @@ function App() {
         .setScale(isMobile ? 0.12 : 0.15);
 
       //Trail
-     // --- 1. СТВОРЕННЯ ТЕКСТУРИ (Малюємо м'яку крапку) ---
+      // --- 1. СТВОРЕННЯ ТЕКСТУРИ (Малюємо м'яку крапку) ---
       const graphics = this.make.graphics({ x: 0, y: 0, add: false });
-      
+
       // Зовнішнє коло (аура). 0.4 - це прозорість. Менше = шлейф "худіший"
-      graphics.fillStyle(0xffffff, 0.4); 
+      graphics.fillStyle(0xffffff, 0.4);
       graphics.fillCircle(8, 8, 8); // Радіус 8 (для текстури 16x16)
-      
+
       // Внутрішнє коло (ядро). 1 - повна яскравість.
       graphics.fillStyle(0xffffff, 1);
       graphics.fillCircle(8, 8, 3); // Чіткий центр
-      
+
       graphics.generateTexture("white_dot", 16, 16);
 
       // --- 2. ПАРАМЕТРИ ПІДЛАШТУВАННЯ (Змінюй тут) ---
       const trailSettings = {
         // Базова ширина: на ПК 0.9, на мобілці менше (0.6), бо там високий DPR
-        baseScale: isMobile ? 0.4 : 0.9, 
-        
+        baseScale: isMobile ? 0.4 : 0.9,
+
         // Відступ від центру корабля (щоб виходило точно з сопла)
         yOffset: isMobile ? 16 : 30,
-        
+
         // Час життя часток (мс). Більше = довший шлейф
         lifespan: isMobile ? 200 : 380,
-        
+
         // Швидкість вильоту вниз (min/max для рандому)
         speedY: isMobile ? 120 : 150,
-        
+
         // Розкид вбік (0 = ідеально пряма лінія, 10 = широкий факел)
         speedX: 5,
-        
+
         // Густота: 1 - рідко (диркавий), 10 - дуже густий (як лазер)
         frequency: 6,
-        
+
         // Кількість часток за один раз
-        quantity: 2
+        quantity: 2,
       };
 
       // --- 3. НАЛАШТУВАННЯ ЕМІТЕРА ---
-      ship.thrustEmitter = this.add.particles(0, 0, "white_dot", {
-        follow: ship,
-        followOffset: { x: 0, y: trailSettings.yOffset * dpr },
+      ship.thrustEmitter = this.add
+        .particles(0, 0, "white_dot", {
+          follow: ship,
+          followOffset: { x: 0, y: trailSettings.yOffset * dpr },
 
-        lifespan: trailSettings.lifespan,
-        
-        // Швидкість множимо на dpr, щоб на телефонах не "гальмувало"
-        speedY: { 
-          min: trailSettings.speedY * dpr, 
-          max: (trailSettings.speedY + 100) * dpr 
-        },
-        
-        speedX: { 
-          min: -trailSettings.speedX * dpr, 
-          max: trailSettings.speedX * dpr 
-        },
+          lifespan: trailSettings.lifespan,
 
-        // Множимо базу на dpr для чіткості на Retina/AMOLED екранах
-        scale: { start: trailSettings.baseScale * dpr, end: 0 },
-        
-        // Прозорість: 0.7 на старті, 0 в кінці (плавне зникнення)
-        alpha: { start: 0.7, end: 0 },
+          // Швидкість множимо на dpr, щоб на телефонах не "гальмувало"
+          speedY: {
+            min: trailSettings.speedY * dpr,
+            max: (trailSettings.speedY + 100) * dpr,
+          },
 
-        // Кольори: Phaser вибирає рандомно з масиву для кожної частки
-        tint: [0xffffff, 0x00ccff, 0x0066ff, 0x0000ff, 0x000088],
+          speedX: {
+            min: -trailSettings.speedX * dpr,
+            max: trailSettings.speedX * dpr,
+          },
 
-        blendMode: "ADD", // Режим накладання (світіння)
-        frequency: trailSettings.frequency,
-        quantity: trailSettings.quantity,
-      });
+          // Множимо базу на dpr для чіткості на Retina/AMOLED екранах
+          scale: { start: trailSettings.baseScale * dpr, end: 0 },
+
+          // Прозорість: 0.7 на старті, 0 в кінці (плавне зникнення)
+          alpha: { start: 0.7, end: 0 },
+
+          // Кольори: Phaser вибирає рандомно з масиву для кожної частки
+          tint: [0xffffff, 0x00ccff, 0x0066ff, 0x0000ff, 0x000088],
+
+          blendMode: "ADD", // Режим накладання (світіння)
+          frequency: trailSettings.frequency,
+          quantity: trailSettings.quantity,
+        })
+        .setDepth(11);
 
       // Фізика з інерцією
       ship
@@ -192,6 +195,30 @@ function App() {
         .setMaxVelocity((isMobile ? 350 : 800) * dpr);
 
       asteroids = this.physics.add.group();
+
+      //Pattern asteroids
+      // =========================
+      // ПАТТЕРНИ АСТЕРОЇДІВ
+      // =========================
+
+      // 3 лінії:
+      // [лівий, центр, правий]
+      //
+      // 1 = є астероїд
+      // 0 = прохід
+
+      asteroidPatterns = [
+        [1, 0, 1], // прохід по центру
+        [0, 1, 1], // прохід зліва
+        [1, 1, 0], // прохід справа
+
+        [1, 0, 0],
+        [0, 1, 0],
+        [0, 0, 1],
+
+        [1, 0, 1],
+        [0, 1, 0],
+      ];
 
       const barWidth = isMobile ? width * 0.5 : 280 * dpr;
       const barX = (isMobile ? 20 : 80) * dpr;
@@ -326,7 +353,7 @@ function App() {
       );
 
       if (progress < 1) {
-        const maxAccel = 2.0;
+        const maxAccel = isMobile ? 2.8 : 2.0;
         const accelTime = 3000; // 3 секунды
         const accelSpeed = maxAccel / (accelTime / 16.66);
         if (currentAcceleration < maxAccel)
@@ -394,29 +421,106 @@ function App() {
         uiShip.x = barX + barWidth * progress;
         progressText.setText(`${Math.round(progress * 100)}%`);
 
-        const spawnInterval = isMobile ? 650 : 350;
+        //Pattern asteroids
+        // =====================================
+        // SPAWN ПАТТЕРНІВ
+        // =====================================
+
+        // Інтервал між групами астероїдів
+        // Менше = складніше
+        // =====================================
+        // SPAWN ПАТТЕРНІВ
+        // =====================================
+
+        // Інтервал між паттернами
+        // Менше = складніше
+        const spawnInterval = isMobile ? 2000 : 2000;
+
         if (this.time.now > lastAsteroidTime + spawnInterval) {
           lastAsteroidTime = this.time.now;
-          let spawnX = Phaser.Math.Between(30 * dpr, width - 30 * dpr);
-          const ast = asteroids.create(
-            spawnX,
-            -100 * dpr,
-            Phaser.Math.RND.pick(["asteroid", "asteroid2"]),
-          );
-          const astScale =
-            (isMobile
-              ? Phaser.Math.FloatBetween(0.1, 0.2)
-              : Phaser.Math.FloatBetween(0.4, 0.7)) * dpr;
-          ast
-            .setVelocityY(
-              isMobile
-                ? Phaser.Math.Between(150, 300)
-                : Phaser.Math.Between(250, 500),
-            )
-            .setScale(astScale)
-            .setDepth(1.5);
-          ast.body.setCircle((ast.width / dpr) * 0.35);
-          ast.setAngularVelocity(Phaser.Math.Between(-50, 50));
+
+          // 3 лінії
+          const lanes = 3;
+
+          // Ширина однієї лінії
+          const laneWidth = width / lanes;
+
+          // Випадковий паттерн
+          const pattern = Phaser.Math.RND.pick(asteroidPatterns);
+
+          //Єдина швидкість для патернів
+          const patternSpeed = isMobile
+            ? Phaser.Math.Between(200, 260)
+            : Phaser.Math.Between(300, 420);
+
+          // Проходимо по лініях
+          pattern.forEach((cell, laneIndex) => {
+            // Якщо тут мають бути астероїди
+            if (cell === 1) {
+              // =========================
+              // СКІЛЬКИ АСТЕРОЇДІВ В ЛІНІЇ
+              // =========================
+
+              const asteroidCount = isMobile ? 3 : 4;
+
+              for (let j = 0; j < asteroidCount; j++) {
+                // =========================
+                // МЕЖІ ЛІНІЇ
+                // =========================
+
+                const laneStartX = laneWidth * laneIndex;
+                const laneEndX = laneStartX + laneWidth;
+
+                // Випадкова позиція В СЕРЕДИНІ ВСІЄЇ ЛІНІЇ
+                const spawnX = Phaser.Math.Between(
+                  laneStartX + 20 * dpr,
+                  laneEndX - 20 * dpr,
+                );
+
+                // Невеликий вертикальний розкид
+                const spawnY = -100 * dpr - Phaser.Math.Between(0, 120 * dpr);
+
+                // Створення астероїда
+                const ast = asteroids.create(
+                  spawnX,
+                  spawnY,
+                  Phaser.Math.RND.pick(["asteroid", "asteroid2"]),
+                );
+
+                // =========================
+                // РОЗМІРИ
+                // =========================
+
+                const astScale =
+                  (isMobile
+                    ? Phaser.Math.FloatBetween(0.12, 0.2)
+                    : Phaser.Math.FloatBetween(0.4, 0.7)) * dpr;
+
+                ast
+                  .setScale(astScale)
+
+                  // =========================
+                  // ШВИДКІСТЬ
+                  // =========================
+
+                  .setVelocityY(patternSpeed)
+
+                  .setDepth(1.5);
+
+                // =========================
+                // ХІТБОКС
+                // =========================
+
+                ast.body.setCircle((ast.width / dpr) * 0.38);
+
+                // =========================
+                // ОБЕРТАННЯ
+                // =========================
+
+                ast.setAngularVelocity(Phaser.Math.Between(-80, 80));
+              }
+            }
+          });
         }
       } else if (!planetParallax.isWin) {
         planetParallax.isWin = true;
