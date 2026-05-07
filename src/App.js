@@ -56,6 +56,8 @@ function App() {
     let currentAcceleration = 0;
     let lastAsteroidTime = 0;
     let asteroidPatterns = [];
+    let isTurboActivated = false;
+    let musicStartTime = 0;
     const publicBase = (process.env.PUBLIC_URL || "").replace(/\/$/, "");
     const asset = (name) => `${publicBase}/${name}`;
 
@@ -80,6 +82,10 @@ function App() {
       // Скидаємо стан
       isGameStarted = false;
       isGameOver = false;
+
+      isTurboActivated = false; // ОБОВ'ЯЗКОВО СКИДАЄМО ТУТ
+      musicStartTime = 0; // ОБОВ'ЯЗКОВО СКИДАЄМО ТУТ
+
       currentAcceleration = 0;
       lastAsteroidTime = 0;
 
@@ -303,6 +309,7 @@ function App() {
         if (bgMusic) {
           bgMusic.stop();
           bgMusic.play();
+          musicStartTime = this.time.now;
         }
 
         let count = 3;
@@ -435,10 +442,23 @@ function App() {
         if (currentAcceleration < maxAccel)
           currentAcceleration += accelSpeed * dt;
 
+        // 1. Рахуємо час від початку музики
+        const elapsed = this.time.now - musicStartTime;
+
+        // 2. Перевіряємо, чи пора робити спалах і прискорювати фон
+        if (elapsed > 21000 && !isTurboActivated) {
+          isTurboActivated = true;
+          this.cameras.main.flash(500, 255, 255, 255); // Білий спалах на пів секунди
+        }
+
+        // 3. Створюємо множник швидкості: якщо турбо ввімкнено — швидкість х3
+        const speedMultiplier = isTurboActivated ? 3 : 1;
+
+        // 4. ЗАМІСТЬ ТВОЇХ РЯДКІВ СТАВИМО ЦІ:
         spaceBack.tilePositionY -=
-          currentAcceleration * (isMobile ? 30 : 65) * dt;
+          currentAcceleration * (isMobile ? 30 : 65) * dt * speedMultiplier;
         spaceBackSlow.tilePositionY -=
-          currentAcceleration * (isMobile ? 6 : 10) * dt;
+          currentAcceleration * (isMobile ? 6 : 10) * dt * speedMultiplier;
 
         const vis =
           currentAcceleration > 0.05
@@ -602,6 +622,10 @@ function App() {
         planetParallax.isWin = true;
         currentAcceleration = 0;
         ship.setAcceleration(0).setVelocity(0);
+
+        // ЗУПИНЯЄМО ВИПУСК НОВИХ ЧАСТОК
+        if (ship.thrustEmitter) ship.thrustEmitter.stop();
+
         this.tweens.add({
           targets: ship,
           x: width / 2,
@@ -610,6 +634,29 @@ function App() {
           duration: 2000,
           onComplete: () => {
             landingText.setAlpha(1);
+
+// 2. Створюємо кнопку "Круто! Грати ще!!!"
+            const winBtn = this.add
+              .text(width / 2, height / 2 + 80 * dpr, "Оце Круто! Грати ще!!!", {
+                fontSize: isMobile ? "28px" : "40px",
+                fill: "#00ffff",
+                fontFamily: "Arial Black",
+                backgroundColor: "#000000aa",
+                padding: { x: 20, y: 10 },
+              })
+              .setOrigin(0.5)
+              .setDepth(2000)
+              .setInteractive({ useHandCursor: true });
+
+            // 3. Логіка натискання (перезапуск)
+            winBtn.on("pointerdown", () => {
+              this.scene.restart({ isRestart: true });
+            });
+
+            // Ефект при наведенні (необов'язково)
+            winBtn.on("pointerover", () => winBtn.setStyle({ fill: "#ffffff" }));
+            winBtn.on("pointerout", () => winBtn.setStyle({ fill: "#00ffff" }));
+            
           },
         });
       }
