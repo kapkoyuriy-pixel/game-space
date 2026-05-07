@@ -115,33 +115,73 @@ function App() {
         .setScale(isMobile ? 0.12 : 0.15);
 
       //Trail
-      // --- СТВОРЕННЯ М'ЯКОЇ КРАПКИ ---
+     // --- 1. СТВОРЕННЯ ТЕКСТУРИ (Малюємо м'яку крапку) ---
       const graphics = this.make.graphics({ x: 0, y: 0, add: false });
-      graphics.fillStyle(0xffffff, 0.3);
-      graphics.fillCircle(4, 4, 4);
-      graphics.fillStyle(0xffffff, 0.8);
-      graphics.fillCircle(4, 4, 2);
-      graphics.generateTexture("white_dot", 8, 8);
+      
+      // Зовнішнє коло (аура). 0.4 - це прозорість. Менше = шлейф "худіший"
+      graphics.fillStyle(0xffffff, 0.4); 
+      graphics.fillCircle(8, 8, 8); // Радіус 8 (для текстури 16x16)
+      
+      // Внутрішнє коло (ядро). 1 - повна яскравість.
+      graphics.fillStyle(0xffffff, 1);
+      graphics.fillCircle(8, 8, 3); // Чіткий центр
+      
+      graphics.generateTexture("white_dot", 16, 16);
 
-      // --- НАЛАШТУВАННЯ ЕМІТЕРА ---
+      // --- 2. ПАРАМЕТРИ ПІДЛАШТУВАННЯ (Змінюй тут) ---
+      const trailSettings = {
+        // Базова ширина: на ПК 0.9, на мобілці менше (0.6), бо там високий DPR
+        baseScale: isMobile ? 0.4 : 0.9, 
+        
+        // Відступ від центру корабля (щоб виходило точно з сопла)
+        yOffset: isMobile ? 16 : 30,
+        
+        // Час життя часток (мс). Більше = довший шлейф
+        lifespan: isMobile ? 200 : 380,
+        
+        // Швидкість вильоту вниз (min/max для рандому)
+        speedY: isMobile ? 120 : 150,
+        
+        // Розкид вбік (0 = ідеально пряма лінія, 10 = широкий факел)
+        speedX: 5,
+        
+        // Густота: 1 - рідко (диркавий), 10 - дуже густий (як лазер)
+        frequency: 6,
+        
+        // Кількість часток за один раз
+        quantity: 2
+      };
+
+      // --- 3. НАЛАШТУВАННЯ ЕМІТЕРА ---
       ship.thrustEmitter = this.add.particles(0, 0, "white_dot", {
         follow: ship,
-        followOffset: { x: 0, y: 30 * dpr },
+        followOffset: { x: 0, y: trailSettings.yOffset * dpr },
 
-        // ДЕ МІНЯТИ ДОВЖИНУ:
-        lifespan: 380, // Збільшуй це число (напр. до 600), щоб шлейф став ще довшим
-        speedY: { min: 150, max: 250 }, // Швидкість вниз (теж впливає на довжину)
+        lifespan: trailSettings.lifespan,
+        
+        // Швидкість множимо на dpr, щоб на телефонах не "гальмувало"
+        speedY: { 
+          min: trailSettings.speedY * dpr, 
+          max: (trailSettings.speedY + 100) * dpr 
+        },
+        
+        speedX: { 
+          min: -trailSettings.speedX * dpr, 
+          max: trailSettings.speedX * dpr 
+        },
 
-        speedX: { min: -5, max: 5 },
-        scale: { start: 1.8 * dpr, end: 0 },
+        // Множимо базу на dpr для чіткості на Retina/AMOLED екранах
+        scale: { start: trailSettings.baseScale * dpr, end: 0 },
+        
+        // Прозорість: 0.7 на старті, 0 в кінці (плавне зникнення)
         alpha: { start: 0.7, end: 0 },
 
-        // Кольори (більше синього, мало білого)
+        // Кольори: Phaser вибирає рандомно з масиву для кожної частки
         tint: [0xffffff, 0x00ccff, 0x0066ff, 0x0000ff, 0x000088],
 
-        blendMode: "ADD",
-        frequency: 6,
-        quantity: 2,
+        blendMode: "ADD", // Режим накладання (світіння)
+        frequency: trailSettings.frequency,
+        quantity: trailSettings.quantity,
       });
 
       // Фізика з інерцією
