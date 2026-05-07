@@ -114,6 +114,36 @@ function App() {
         .setDepth(12)
         .setScale(isMobile ? 0.12 : 0.15);
 
+      //Trail
+      // --- СТВОРЕННЯ М'ЯКОЇ КРАПКИ ---
+      const graphics = this.make.graphics({ x: 0, y: 0, add: false });
+      graphics.fillStyle(0xffffff, 0.3);
+      graphics.fillCircle(4, 4, 4);
+      graphics.fillStyle(0xffffff, 0.8);
+      graphics.fillCircle(4, 4, 2);
+      graphics.generateTexture("white_dot", 8, 8);
+
+      // --- НАЛАШТУВАННЯ ЕМІТЕРА ---
+      ship.thrustEmitter = this.add.particles(0, 0, "white_dot", {
+        follow: ship,
+        followOffset: { x: 0, y: 30 * dpr },
+
+        // ДЕ МІНЯТИ ДОВЖИНУ:
+        lifespan: 380, // Збільшуй це число (напр. до 600), щоб шлейф став ще довшим
+        speedY: { min: 150, max: 250 }, // Швидкість вниз (теж впливає на довжину)
+
+        speedX: { min: -5, max: 5 },
+        scale: { start: 1.8 * dpr, end: 0 },
+        alpha: { start: 0.7, end: 0 },
+
+        // Кольори (більше синього, мало білого)
+        tint: [0xffffff, 0x00ccff, 0x0066ff, 0x0000ff, 0x000088],
+
+        blendMode: "ADD",
+        frequency: 6,
+        quantity: 2,
+      });
+
       // Фізика з інерцією
       ship
         .setCollideWorldBounds(true)
