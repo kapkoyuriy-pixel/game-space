@@ -47,6 +47,8 @@ function App() {
       progressText,
       landingText,
       countdownText,
+      bgMusic,
+      crashSound,
       fpsText,
       cursors;
     let isGameStarted = false;
@@ -63,19 +65,31 @@ function App() {
       this.load.image("ship", asset("ship.png"));
       this.load.image("asteroid", asset("asteroid.png"));
       this.load.image("asteroid2", asset("asteroid2.png"));
+
+      this.load.audio("bgMusic", asset("music.mp3"));
+      this.load.audio("crash", asset("crash.mp3"));
     }
 
-    function create() {
+    function create(data) {
       const width = this.cameras.main.width;
       const height = this.cameras.main.height;
       const isMobile = window.innerWidth < 768;
       const baseScale = isMobile ? Math.min(window.innerWidth / 400, 0.6) : 1.0;
       const uiScale = baseScale * dpr;
 
+      // Скидаємо стан
       isGameStarted = false;
       isGameOver = false;
       currentAcceleration = 0;
       lastAsteroidTime = 0;
+
+      const isRestart = data && data.isRestart;
+
+      // Ініціалізація звуків (тільки якщо ще не створені)
+      if (!bgMusic)
+        bgMusic = this.sound.add("bgMusic", { loop: true, volume: 0.5 });
+      if (!crashSound) crashSound = this.sound.add("crash", { volume: 0.6 });
+
       cursors = this.input.keyboard.createCursorKeys();
 
       spaceBackSlow = this.add
@@ -95,6 +109,7 @@ function App() {
         .setTint(0xaaaaaa);
       planetParallax.maxPlanetScale = width / planetParallax.width;
       planetParallax.isWin = false;
+      planetParallax.spawnTime = 0;
 
       dustParticles = this.add.group();
       for (let i = 0; i < (isMobile ? 10 : 120); i++) {
@@ -113,8 +128,8 @@ function App() {
       ship = this.physics.add
         .sprite(width / 2, isMobile ? height * 0.8 : height * 0.85, "ship")
         .setDepth(12)
-        .setScale(isMobile ? 0.12 : 0.15);
-
+        .setScale((isMobile ? 0.12 : 0.15) * uiScale); // Додано uiScale для чіткості
+      ship.body.enable = true;
       //Trail
       // --- 1. СТВОРЕННЯ ТЕКСТУРИ (Малюємо м'яку крапку) ---
       const graphics = this.make.graphics({ x: 0, y: 0, add: false });
@@ -282,37 +297,98 @@ function App() {
         .setDepth(100)
         .setResolution(dpr);
 
-      let count = 3;
-      const timer = this.time.addEvent({
-        delay: 1000,
-        callback: () => {
-          if (count > 0) countdownText.setText(count--);
-          else if (count === 0) {
-            countdownText.setText("ПОЛЕТІЛИ!");
-            count--;
-          } else {
-            countdownText.destroy();
-            isGameStarted = true;
-            planetParallax.spawnTime = this.time.now / 1000;
-            timer.destroy();
-          }
-        },
-        repeat: 4,
-      });
+      // Функція запуску
+      const startCountdown = () => {
+        // Музика стартує з самого початку відліку
+        if (bgMusic) {
+          bgMusic.stop();
+          bgMusic.play();
+        }
+
+        let count = 3;
+        countdownText.setAlpha(1);
+        countdownText.setText(count);
+
+        const timer = this.time.addEvent({
+          delay: 1000,
+          repeat: 4, // Важливо: 4 повтори, щоб вистачило часу на всі фази
+          callback: () => {
+            if (count > 0) {
+              countdownText.setText(count--);
+            } else if (count === 0) {
+              countdownText.setText("ПОЛЕТІЛИ!");
+              count--;
+            } else {
+              // ОСЬ ТУТ ГРА ЗАПУСКАЄТЬСЯ
+              countdownText.setText("");
+              isGameStarted = true; // Тепер корабель точно летить
+              planetParallax.spawnTime = this.time.now / 1000;
+              ship.thrustEmitter.start(); // Вмикаємо вогонь
+              timer.destroy();
+            }
+          },
+        });
+      };
+
+      // Кнопка START або автозапуск при Restart
+      if (isRestart) {
+        startCountdown();
+      } else {
+        const startBtn = this.add
+          .text(width / 2, height / 2, "START", {
+            fontSize: isMobile ? "50px" : "80px",
+            fill: "#00ffff",
+            fontFamily: "Arial Black",
+            backgroundColor: "#00000088",
+            padding: { x: 20, y: 10 },
+          })
+          .setOrigin(0.5)
+          .setDepth(1000)
+          .setInteractive({ useHandCursor: true });
+
+        startBtn.on("pointerdown", () => {
+          startBtn.destroy();
+          startCountdown();
+        });
+      }
 
       this.physics.add.overlap(ship, asteroids, () => {
         if (!planetParallax.isWin && isGameStarted && !isGameOver) {
-          isGameOver = true;
-          this.cameras.main.flash(400, 0, 255, 255);
-          this.cameras.main.shake(300, 0.01);
+          isGameOver = true; // Блокуємо повторні спрацювання
 
-          this.time.delayedCall(450, () => {
-            this.cameras.main.flash(600, 0, 255, 255);
-            this.cameras.main.shake(400, 0.015);
-          });
+          // Зупиняємо все
           this.physics.pause();
-          this.time.delayedCall(1600, () => {
-            this.scene.restart();
+          ship.thrustEmitter.stop();
+          if (bgMusic) bgMusic.stop(); // Музика зупиняється
+          if (crashSound) crashSound.play();
+
+          // ПЕРШИЙ СПАЛАХ (Морська хвиля)
+          this.cameras.main.flash(200, 0, 255, 255);
+
+          // ДРУГИЙ СПАЛАХ через 250 мс
+          this.time.delayedCall(250, () => {
+            this.cameras.main.flash(200, 0, 255, 255);
+          });
+
+          this.cameras.main.shake(300, 0.02);
+
+          // Кнопка RESTART
+          this.time.delayedCall(800, () => {
+            const rBtn = this.add
+              .text(width / 2, height / 2, "RESTART", {
+                fontSize: isMobile ? "45px" : "64px",
+                fill: "#ff4444",
+                fontFamily: "Arial Black",
+                backgroundColor: "#00000088",
+                padding: { x: 20, y: 10 },
+              })
+              .setOrigin(0.5)
+              .setDepth(2000)
+              .setInteractive({ useHandCursor: true });
+
+            rBtn.on("pointerdown", () => {
+              this.scene.restart({ isRestart: true });
+            });
           });
         }
       });
@@ -550,3 +626,4 @@ function App() {
 }
 
 export default App;
+
