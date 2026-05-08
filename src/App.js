@@ -7,7 +7,7 @@ function App() {
   const gameRef = useRef(null);
 
   useEffect(() => {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
 
     const config = {
       type: Phaser.AUTO,
@@ -31,7 +31,7 @@ function App() {
       render: {
         pixelArt: false,
         antialias: true,
-        roundPixels: true,
+        roundPixels: false,
       },
     };
 
@@ -153,16 +153,16 @@ function App() {
       // --- 2. ПАРАМЕТРИ ПІДЛАШТУВАННЯ (Змінюй тут) ---
       const trailSettings = {
         // Базова ширина: на ПК 0.9, на мобілці менше (0.6), бо там високий DPR
-        baseScale: isMobile ? 0.4 : 0.9,
+        baseScale: isMobile ? 0.9 : 0.9,
 
         // Відступ від центру корабля (щоб виходило точно з сопла)
         yOffset: isMobile ? 30 : 30,
 
         // Час життя часток (мс). Більше = довший шлейф
-        lifespan: isMobile ? 320 : 380,
+        lifespan: isMobile ? 380 : 380,
 
         // Швидкість вильоту вниз (min/max для рандому)
-        speedY: isMobile ? 105 : 150,
+        speedY: isMobile ? 150 : 150,
 
         // Розкид вбік (0 = ідеально пряма лінія, 10 = широкий факел)
         speedX: 5,
@@ -194,7 +194,7 @@ function App() {
           },
 
           // Множимо базу на dpr для чіткості на Retina/AMOLED екранах
-          scale: { start: trailSettings.baseScale * dpr, end: 0 },
+          scale: { start: trailSettings.baseScale, end: 0 },
 
           // Прозорість: 0.7 на старті, 0 в кінці (плавне зникнення)
           alpha: { start: 0.7, end: 0 },
