@@ -16,7 +16,7 @@ function App() {
       pixelArt: false, // Для плавної графіки
       antialias: true,
       antialiasGL: true, // Покращує чіткість на нових мобілках
-      roundPixels: true, // Змушує об'єкти чітко ставати в сітку пікселів (як у ГД)
+      roundPixels: false, // Змушує об'єкти чітко ставати в сітку пікселів (як у ГД)
       scale: {
         mode: Phaser.Scale.RESIZE,
         autoCenter: Phaser.Scale.CENTER_BOTH,
@@ -134,7 +134,7 @@ function App() {
       ship = this.physics.add
         .sprite(width / 2, isMobile ? height * 0.8 : height * 0.85, "ship")
         .setDepth(12)
-        .setScale((isMobile ? 0.12 : 0.15) * uiScale); // Додано uiScale для чіткості
+        .setScale(isMobile ? 0.12 : 0.15); // Додано uiScale для чіткості
       ship.body.enable = true;
       //Trail
       // --- 1. СТВОРЕННЯ ТЕКСТУРИ (Малюємо м'яку крапку) ---
@@ -156,13 +156,13 @@ function App() {
         baseScale: isMobile ? 0.4 : 0.9,
 
         // Відступ від центру корабля (щоб виходило точно з сопла)
-        yOffset: isMobile ? 16 : 30,
+        yOffset: isMobile ? 30 : 30,
 
         // Час життя часток (мс). Більше = довший шлейф
-        lifespan: isMobile ? 200 : 380,
+        lifespan: isMobile ? 320 : 380,
 
         // Швидкість вильоту вниз (min/max для рандому)
-        speedY: isMobile ? 120 : 150,
+        speedY: isMobile ? 105 : 150,
 
         // Розкид вбік (0 = ідеально пряма лінія, 10 = широкий факел)
         speedX: 5,
@@ -178,19 +178,19 @@ function App() {
       ship.thrustEmitter = this.add
         .particles(0, 0, "white_dot", {
           follow: ship,
-          followOffset: { x: 0, y: trailSettings.yOffset * dpr },
+          followOffset: { x: 0, y: trailSettings.yOffset },
 
           lifespan: trailSettings.lifespan,
 
           // Швидкість множимо на dpr, щоб на телефонах не "гальмувало"
           speedY: {
-            min: trailSettings.speedY * dpr,
-            max: (trailSettings.speedY + 100) * dpr,
+            min: trailSettings.speedY,
+            max: trailSettings.speedY + 100,
           },
 
           speedX: {
-            min: -trailSettings.speedX * dpr,
-            max: trailSettings.speedX * dpr,
+            min: -trailSettings.speedX,
+            max: trailSettings.speedX,
           },
 
           // Множимо базу на dpr для чіткості на Retina/AMOLED екранах
@@ -213,7 +213,7 @@ function App() {
         .setCollideWorldBounds(true)
         .setDamping(true)
         .setDrag(isMobile ? 0.92 : 0.95)
-        .setMaxVelocity((isMobile ? 350 : 800) * dpr);
+        .setMaxVelocity(isMobile ? 650 : 800); //Швидкість корабля вліво, вправо
 
       asteroids = this.physics.add.group();
 
@@ -478,12 +478,12 @@ function App() {
         let targetAccelX = 0;
         const pointer = this.input.activePointer;
         if (cursors.left.isDown || (pointer.isDown && pointer.x < width / 2)) {
-          targetAccelX = (isMobile ? -1000 : -2400) * dpr;
+          targetAccelX = (isMobile ? -1800 : -2400);
         } else if (
           cursors.right.isDown ||
           (pointer.isDown && pointer.x >= width / 2)
         ) {
-          targetAccelX = (isMobile ? 1000 : 2400) * dpr;
+          targetAccelX = (isMobile ? 1800 : 2400);
         }
 
         const currentAccelX = ship.body.acceleration.x || 0;
@@ -496,15 +496,15 @@ function App() {
 
         // Поворот залежно від швидкості
         // Вибираємо 0.10 для мобілки і 0.05 для ПК
-        const angleSensitivity = isMobile ? 0.1 : 0.05;
-        const targetAngle = (ship.body.velocity.x * angleSensitivity) / dpr;
+        const angleSensitivity = isMobile ? 0.08 : 0.05;
+        const targetAngle = ship.body.velocity.x * angleSensitivity;
         ship.angle = Phaser.Math.Linear(ship.angle, targetAngle, 0.2);
 
         if (progress > 0.07) {
           const adj = (progress - 0.07) / 0.93;
           planetParallax.setScale(
-            0.005 * dpr +
-              (planetParallax.maxPlanetScale - 0.005 * dpr) *
+            0.005 +
+              (planetParallax.maxPlanetScale - 0.005) *
                 Math.pow(adj, 2.5),
           );
           planetParallax.setAlpha(Math.min(1, 0.3 + adj * 2));
@@ -530,7 +530,7 @@ function App() {
 
         // Інтервал між паттернами
         // Менше = складніше
-        const spawnInterval = isMobile ? 2000 : 2000;
+        const spawnInterval = isMobile ? 2200 : 2000;
 
         if (this.time.now > lastAsteroidTime + spawnInterval) {
           lastAsteroidTime = this.time.now;
@@ -588,9 +588,9 @@ function App() {
                 // =========================
 
                 const astScale =
-                  (isMobile
-                    ? Phaser.Math.FloatBetween(0.12, 0.2)
-                    : Phaser.Math.FloatBetween(0.4, 0.7)) * dpr;
+                  isMobile
+                    ? Phaser.Math.FloatBetween(0.2, 0.35)
+                    : Phaser.Math.FloatBetween(0.4, 0.7);
 
                 ast
                   .setScale(astScale)
@@ -607,7 +607,7 @@ function App() {
                 // ХІТБОКС
                 // =========================
 
-                ast.body.setCircle((ast.width / dpr) * 0.38);
+                ast.body.setCircle(ast.width * 0.38);
 
                 // =========================
                 // ОБЕРТАННЯ
